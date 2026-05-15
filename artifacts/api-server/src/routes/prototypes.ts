@@ -4,10 +4,12 @@ import { eq } from "drizzle-orm";
 import {
   CreatePrototypeBody,
   GetPrototypeParams,
+  DeletePrototypeParams,
   GetCommentsParams,
   CreateCommentParams,
   CreateCommentBody,
-  ResolveCommentParams,
+  ToggleCommentResolvedParams,
+  DeleteCommentParams,
 } from "@workspace/api-zod";
 
 const router = Router();
@@ -18,15 +20,16 @@ router.post("/prototypes", async (req, res) => {
     res.status(400).json({ error: "Invalid request body" });
     return;
   }
-  const { htmlContent, fileName } = parsed.data;
+  const { htmlContent, fileName, projectName } = parsed.data;
   const [prototype] = await db
     .insert(prototypesTable)
-    .values({ htmlContent, fileName })
+    .values({ htmlContent, fileName, projectName })
     .returning();
   res.status(201).json({
     id: prototype.id,
     htmlContent: prototype.htmlContent,
     fileName: prototype.fileName,
+    projectName: prototype.projectName,
     createdAt: prototype.createdAt.toISOString(),
   });
 });
@@ -36,15 +39,17 @@ router.get("/prototypes", async (req, res) => {
     .select({
       id: prototypesTable.id,
       fileName: prototypesTable.fileName,
+      projectName: prototypesTable.projectName,
       createdAt: prototypesTable.createdAt,
     })
     .from(prototypesTable)
     .orderBy(prototypesTable.createdAt)
-    .limit(20);
+    .limit(50);
   res.json(
     prototypes.map((p) => ({
       id: p.id,
       fileName: p.fileName,
+      projectName: p.projectName,
       createdAt: p.createdAt.toISOString(),
     }))
   );
@@ -69,8 +74,26 @@ router.get("/prototypes/:id", async (req, res) => {
     id: prototype.id,
     htmlContent: prototype.htmlContent,
     fileName: prototype.fileName,
+    projectName: prototype.projectName,
     createdAt: prototype.createdAt.toISOString(),
   });
+});
+
+router.delete("/prototypes/:id", async (req, res) => {
+  const parsed = DeletePrototypeParams.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid params" });
+    return;
+  }
+  const [deleted] = await db
+    .delete(prototypesTable)
+    .where(eq(prototypesTable.id, parsed.data.id))
+    .returning();
+  if (!deleted) {
+    res.status(404).json({ error: "Prototype not found" });
+    return;
+  }
+  res.json({ success: true });
 });
 
 router.get("/prototypes/:id/comments", async (req, res) => {
@@ -125,20 +148,25 @@ router.post("/prototypes/:id/comments", async (req, res) => {
 });
 
 router.patch("/comments/:id/resolve", async (req, res) => {
-  const parsed = ResolveCommentParams.safeParse(req.params);
+  const parsed = ToggleCommentResolvedParams.safeParse(req.params);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid params" });
     return;
   }
-  const [comment] = await db
-    .update(commentsTable)
-    .set({ resolved: true })
+  const [existing] = await db
+    .select()
+    .from(commentsTable)
     .where(eq(commentsTable.id, parsed.data.id))
-    .returning();
-  if (!comment) {
+    .limit(1);
+  if (!existing) {
     res.status(404).json({ error: "Comment not found" });
     return;
   }
+  const [comment] = await db
+    .update(commentsTable)
+    .set({ resolved: !existing.resolved })
+    .where(eq(commentsTable.id, parsed.data.id))
+    .returning();
   res.json({
     id: comment.id,
     prototypeId: comment.prototypeId,
@@ -148,6 +176,23 @@ router.patch("/comments/:id/resolve", async (req, res) => {
     resolved: comment.resolved,
     createdAt: comment.createdAt.toISOString(),
   });
+});
+
+router.delete("/comments/:id", async (req, res) => {
+  const parsed = DeleteCommentParams.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid params" });
+    return;
+  }
+  const [deleted] = await db
+    .delete(commentsTable)
+    .where(eq(commentsTable.id, parsed.data.id))
+    .returning();
+  if (!deleted) {
+    res.status(404).json({ error: "Comment not found" });
+    return;
+  }
+  res.json({ success: true });
 });
 
 export default router;

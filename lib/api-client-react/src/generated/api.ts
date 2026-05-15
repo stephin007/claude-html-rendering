@@ -22,6 +22,7 @@ import type {
 import type {
   Comment,
   CommentInput,
+  DeleteResult,
   HealthStatus,
   Prototype,
   PrototypeInput,
@@ -342,6 +343,76 @@ export function useGetPrototype<TData = Awaited<ReturnType<typeof getPrototype>>
 
 
 
+export const getDeletePrototypeUrl = (id: string,) => {
+
+
+
+
+  return `/api/prototypes/${id}`
+}
+
+/**
+ * @summary Delete a prototype and all its comments
+ */
+export const deletePrototype = async (id: string, options?: RequestInit): Promise<DeleteResult> => {
+
+  return customFetch<DeleteResult>(getDeletePrototypeUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeletePrototypeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePrototype>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deletePrototype>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deletePrototype'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deletePrototype>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deletePrototype(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeletePrototypeMutationResult = NonNullable<Awaited<ReturnType<typeof deletePrototype>>>
+
+    export type DeletePrototypeMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete a prototype and all its comments
+ */
+export const useDeletePrototype = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePrototype>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deletePrototype>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeletePrototypeMutationOptions(options));
+    }
+
 export const getGetCommentsUrl = (id: string,) => {
 
 
@@ -491,7 +562,7 @@ export const useCreateComment = <TError = ErrorType<unknown>,
       return useMutation(getCreateCommentMutationOptions(options));
     }
 
-export const getResolveCommentUrl = (id: string,) => {
+export const getToggleCommentResolvedUrl = (id: string,) => {
 
 
 
@@ -500,11 +571,11 @@ export const getResolveCommentUrl = (id: string,) => {
 }
 
 /**
- * @summary Mark a comment as resolved
+ * @summary Toggle a comment resolved/unresolved
  */
-export const resolveComment = async (id: string, options?: RequestInit): Promise<Comment> => {
+export const toggleCommentResolved = async (id: string, options?: RequestInit): Promise<Comment> => {
 
-  return customFetch<Comment>(getResolveCommentUrl(id),
+  return customFetch<Comment>(getToggleCommentResolvedUrl(id),
   {
     ...options,
     method: 'PATCH'
@@ -516,11 +587,11 @@ export const resolveComment = async (id: string, options?: RequestInit): Promise
 
 
 
-export const getResolveCommentMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resolveComment>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof resolveComment>>, TError,{id: string}, TContext> => {
+export const getToggleCommentResolvedMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof toggleCommentResolved>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof toggleCommentResolved>>, TError,{id: string}, TContext> => {
 
-const mutationKey = ['resolveComment'];
+const mutationKey = ['toggleCommentResolved'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -530,10 +601,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resolveComment>>, {id: string}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof toggleCommentResolved>>, {id: string}> = (props) => {
           const {id} = props ?? {};
 
-          return  resolveComment(id,requestOptions)
+          return  toggleCommentResolved(id,requestOptions)
         }
 
 
@@ -543,21 +614,91 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type ResolveCommentMutationResult = NonNullable<Awaited<ReturnType<typeof resolveComment>>>
+    export type ToggleCommentResolvedMutationResult = NonNullable<Awaited<ReturnType<typeof toggleCommentResolved>>>
 
-    export type ResolveCommentMutationError = ErrorType<void>
+    export type ToggleCommentResolvedMutationError = ErrorType<void>
 
     /**
- * @summary Mark a comment as resolved
+ * @summary Toggle a comment resolved/unresolved
  */
-export const useResolveComment = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resolveComment>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+export const useToggleCommentResolved = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof toggleCommentResolved>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
-        Awaited<ReturnType<typeof resolveComment>>,
+        Awaited<ReturnType<typeof toggleCommentResolved>>,
         TError,
         {id: string},
         TContext
       > => {
-      return useMutation(getResolveCommentMutationOptions(options));
+      return useMutation(getToggleCommentResolvedMutationOptions(options));
+    }
+
+export const getDeleteCommentUrl = (id: string,) => {
+
+
+
+
+  return `/api/comments/${id}`
+}
+
+/**
+ * @summary Delete a comment
+ */
+export const deleteComment = async (id: string, options?: RequestInit): Promise<DeleteResult> => {
+
+  return customFetch<DeleteResult>(getDeleteCommentUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteCommentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteComment>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteComment>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deleteComment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteComment>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteComment(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteCommentMutationResult = NonNullable<Awaited<ReturnType<typeof deleteComment>>>
+
+    export type DeleteCommentMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete a comment
+ */
+export const useDeleteComment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteComment>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteComment>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeleteCommentMutationOptions(options));
     }
 

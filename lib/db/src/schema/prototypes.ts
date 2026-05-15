@@ -6,6 +6,7 @@ export const prototypesTable = pgTable("prototypes", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   htmlContent: text("html_content").notNull(),
   fileName: text("file_name").notNull(),
+  projectName: text("project_name").notNull().default(""),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -21,7 +22,7 @@ export const commentsTable = pgTable("comments", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   prototypeId: text("prototype_id")
     .notNull()
-    .references(() => prototypesTable.id),
+    .references(() => prototypesTable.id, { onDelete: "cascade" }),
   x: real("x").notNull(),
   y: real("y").notNull(),
   text: text("text").notNull(),

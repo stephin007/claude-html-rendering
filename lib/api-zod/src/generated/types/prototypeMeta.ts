@@ -9,5 +9,6 @@
 export interface PrototypeMeta {
   id: string;
   fileName: string;
+  projectName: string;
   createdAt: string;
 }

@@ -9,21 +9,28 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface DeleteResult {
+  success: boolean;
+}
+
 export interface PrototypeInput {
   htmlContent: string;
   fileName: string;
+  projectName: string;
 }
 
 export interface Prototype {
   id: string;
   htmlContent: string;
   fileName: string;
+  projectName: string;
   createdAt: string;
 }
 
 export interface PrototypeMeta {
   id: string;
   fileName: string;
+  projectName: string;
   createdAt: string;
 }
 

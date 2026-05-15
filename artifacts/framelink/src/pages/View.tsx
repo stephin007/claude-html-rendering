@@ -1,16 +1,19 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useParams, Link } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetPrototype,
   useGetComments,
   useCreateComment,
-  useResolveComment,
+  useToggleCommentResolved,
+  useDeleteComment,
   getGetPrototypeQueryKey,
   getGetCommentsQueryKey,
 } from "@workspace/api-client-react";
 
 export default function View() {
   const { id } = useParams<{ id: string }>();
+  const queryClient = useQueryClient();
   
   const [commentMode, setCommentMode] = useState(false);
   const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
@@ -33,7 +36,8 @@ export default function View() {
   });
 
   const createComment = useCreateComment();
-  const resolveComment = useResolveComment();
+  const toggleResolved = useToggleCommentResolved();
+  const deleteComment = useDeleteComment();
 
   useEffect(() => {
     if (popup && inputRef.current) {
@@ -82,8 +86,32 @@ export default function View() {
     );
   };
 
+  const handleToggleResolve = (commentId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleResolved.mutate(
+      { id: commentId },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetCommentsQueryKey(id) });
+        }
+      }
+    );
+  };
+
+  const handleDeleteComment = (commentId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    deleteComment.mutate(
+      { id: commentId },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetCommentsQueryKey(id) });
+        }
+      }
+    );
+  };
+
   const copyForClaude = () => {
-    const text = `Feedback on ${prototype.fileName} — ${comments.length} comments:\n${comments
+    const text = `Feedback on ${prototype.projectName} — ${prototype.fileName} — ${comments.length} comments:\n\n${comments
       .map((c, i) => `#${i + 1} — ${c.text}`)
       .join("\n")}`;
     navigator.clipboard.writeText(text);
@@ -99,13 +127,15 @@ export default function View() {
         <Link href="/" className="text-lg lowercase interactive-element p-1 px-2 border border-transparent -ml-2" data-testid="link-home">
           framelink
         </Link>
-        <div className="text-muted-foreground">{prototype.fileName}</div>
+        <div className="text-muted-foreground uppercase tracking-widest text-sm">
+          <span className="text-foreground font-bold">{prototype.projectName}</span> / {prototype.fileName}
+        </div>
         <button
           onClick={() => {
             setCommentMode(!commentMode);
             setPopup(null);
           }}
-          className={`px-4 py-2 border uppercase tracking-wider interactive-element ${
+          className={`px-4 py-2 border uppercase tracking-wider interactive-element text-sm ${
             commentMode 
               ? "bg-accent text-background border-accent" 
               : "border-border text-foreground hover:border-accent"
@@ -162,7 +192,7 @@ export default function View() {
                 style={{
                   left: `${popup.x}%`,
                   top: `${popup.y}%`,
-                  borderRadius: "2px",
+                  borderRadius: "0px",
                 }}
                 onClick={(e) => e.stopPropagation()}
                 data-testid="popup-new-comment"
@@ -184,14 +214,14 @@ export default function View() {
                 <div className="flex justify-end gap-2">
                   <button
                     onClick={() => setPopup(null)}
-                    className="px-3 py-1 text-sm border border-border text-muted-foreground hover:border-accent hover:text-foreground"
+                    className="px-3 py-1 text-sm border border-border text-muted-foreground hover:border-accent hover:text-foreground interactive-element"
                     data-testid="btn-cancel-comment"
                   >
                     CANCEL
                   </button>
                   <button
                     onClick={handleSaveComment}
-                    className="px-3 py-1 text-sm border border-accent bg-accent text-background hover:opacity-90"
+                    className="px-3 py-1 text-sm border border-accent bg-accent text-background hover:opacity-90 interactive-element"
                     data-testid="btn-save-comment"
                   >
                     SAVE
@@ -203,9 +233,9 @@ export default function View() {
         </main>
 
         {/* Sidebar */}
-        <aside className="w-[280px] shrink-0 border-l border-border bg-surface flex flex-col">
+        <aside className="w-[320px] shrink-0 border-l border-border bg-surface flex flex-col">
           <div className="p-4 border-b border-border flex items-center justify-between shrink-0">
-            <h2 className="tracking-widest uppercase text-sm">COMMENTS</h2>
+            <h2 className="tracking-widest uppercase text-sm font-bold">COMMENTS</h2>
             <span className="text-muted-foreground text-sm">{comments.length}</span>
           </div>
 
@@ -213,9 +243,9 @@ export default function View() {
             {comments.map((comment, idx) => (
               <div
                 key={comment.id}
-                className={`p-3 border-l-2 cursor-pointer interactive-element border border-border ${
+                className={`p-3 border-l-2 cursor-pointer interactive-element border border-border relative group ${
                   comment.resolved 
-                    ? "opacity-50 border-l-[#444444] bg-background/50" 
+                    ? "opacity-60 border-l-[#444444] bg-background/50" 
                     : "border-l-accent bg-background"
                 } ${
                   activeCommentId === comment.id ? "ring-1 ring-border" : ""
@@ -223,7 +253,7 @@ export default function View() {
                 onClick={() => setActiveCommentId(comment.id)}
                 data-testid={`card-${comment.id}`}
               >
-                <div className="flex items-start gap-2 mb-2">
+                <div className="flex items-start gap-2 mb-2 pr-6">
                   <span className={`w-5 h-5 shrink-0 flex items-center justify-center text-xs ${
                     comment.resolved ? "bg-[#444444] text-gray-300" : "bg-accent text-background"
                   }`}
@@ -236,20 +266,24 @@ export default function View() {
                   </p>
                 </div>
                 
-                {!comment.resolved && (
-                  <div className="flex justify-end mt-3">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        resolveComment.mutate({ id: comment.id });
-                      }}
-                      className="text-[10px] uppercase tracking-wider text-muted-foreground border border-border px-2 py-1 interactive-element hover:border-accent hover:text-accent"
-                      data-testid={`btn-resolve-${comment.id}`}
-                    >
-                      RESOLVE
-                    </button>
-                  </div>
-                )}
+                <button
+                  onClick={(e) => handleDeleteComment(comment.id, e)}
+                  className="absolute top-2 right-2 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity interactive-element"
+                  title="Delete comment"
+                  data-testid={`btn-delete-comment-${comment.id}`}
+                >
+                  ✕
+                </button>
+                
+                <div className="flex justify-end mt-3">
+                  <button
+                    onClick={(e) => handleToggleResolve(comment.id, e)}
+                    className="text-[10px] uppercase tracking-wider text-muted-foreground border border-border px-2 py-1 interactive-element hover:border-accent hover:text-accent"
+                    data-testid={`btn-resolve-${comment.id}`}
+                  >
+                    {comment.resolved ? "REOPEN" : "RESOLVE"}
+                  </button>
+                </div>
               </div>
             ))}
             
@@ -263,7 +297,7 @@ export default function View() {
           <div className="p-4 border-t border-border shrink-0">
             <button
               onClick={copyForClaude}
-              className="w-full py-3 border border-border text-sm uppercase tracking-wider interactive-element hover:border-accent"
+              className="w-full py-3 border border-border text-sm uppercase tracking-wider interactive-element hover:border-accent hover:text-accent transition-colors bg-background"
               data-testid="btn-copy-claude"
             >
               → COPY ALL FOR CLAUDE

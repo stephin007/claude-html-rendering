@@ -1,0 +1,183 @@
+Rebuild Framelink from scratch using Replit DB as the only 
+database. No Supabase. No external services. No npm. 
+No build steps. Pure HTML, CSS, JS served statically. 
+All backend via Replit's built-in key-value DB.
+
+WHAT FRAMELINK DOES:
+Upload an HTML prototype, give it a project name, 
+it gets stored in Replit DB, a shareable link is generated. 
+Anyone with the link opens the prototype live in a browser, 
+clicks anywhere to drop numbered comment bubbles, 
+types a comment, hits save. Owner sees all comments 
+in a right panel, can resolve them, copy all for Claude.
+Owner can also delete any prototype.
+
+BACKEND — server.js using Express + @replit/database:
+Build a simple Express server with these endpoints:
+
+POST /api/prototype
+  body: { htmlContent, fileName, projectName }
+  generates uuid, stores in Replit DB as key "proto:UUID"
+  value: { id, htmlContent, fileName, projectName, createdAt }
+  returns: { id }
+
+GET /api/prototype/:id
+  fetches "proto:UUID" from Replit DB
+  returns: { id, fileName, projectName, htmlContent, createdAt }
+
+DELETE /api/prototype/:id
+  deletes "proto:UUID" from Replit DB
+  also deletes all comments for that prototype
+  returns: { success: true }
+
+POST /api/comment
+  body: { prototypeId, x, y, text }
+  generates uuid, stores as key "comment:UUID"
+  value: { id, prototypeId, x, y, text, resolved, createdAt }
+  returns: { id }
+
+GET /api/comments/:prototypeId
+  lists all keys starting with "comment:"
+  filters by prototypeId
+  returns array of comments sorted by createdAt
+
+PATCH /api/comment/:id/resolve
+  fetches comment, toggles resolved boolean
+  returns updated comment
+
+DELETE /api/comment/:id
+  deletes comment from Replit DB
+  returns: { success: true }
+
+GET /api/prototypes
+  lists all keys starting with "proto:"
+  returns array of { id, fileName, projectName, createdAt }
+  sorted by createdAt descending
+
+FILE STRUCTURE:
+server.js — Express backend
+public/index.html — upload + dashboard page
+public/view.html — review page (shareable link)
+public/style.css — global styles
+
+INDEX.HTML — Dashboard + Upload:
+Top bar: "framelink" wordmark left in monospace
+Right side of top bar: prototype count "// 3 PROTOTYPES"
+
+Upload section at top:
+- Two inputs side by side: 
+  text input "PROJECT NAME" and file input "DROP HTML FILE"
+- One button "→ UPLOAD" next to them
+- All in monospace, no border radius, 1px solid border
+- On upload success: adds to list below instantly
+
+Prototype list below upload section:
+- Each row: PROJECT NAME | file name | date | 
+  "→ OPEN LINK" button | "→ SHARE" button | "✕ DELETE" button
+- Clicking DELETE shows a confirm: "DELETE [name]? Y / N"
+- All monospace, no border radius
+- Rows separated by 1px border
+- Hover state: border-left 2px solid accent color
+
+No thumbnails. No cards. Pure list. Raw table aesthetic.
+
+VIEW.HTML — Review page:
+URL format: /view?id=PROTOTYPE_ID
+
+Top bar:
+- "framelink" wordmark far left
+- Project name + file name center in monospace muted
+- "// BROWSE" button right side — toggles comment mode OFF 
+  so reviewer can scroll/interact with the prototype normally
+- "// COMMENT" button right side — toggles comment mode ON
+- When comment mode ON: cursor is crosshair on overlay
+
+Layout:
+- Full screen iframe left side (calc 100vw - 280px wide)
+- Transparent overlay on top of iframe for click capture
+- Right panel 280px fixed
+
+Overlay behaviour:
+- When comment mode ON: pointer-events all, cursor crosshair
+- When comment mode OFF: pointer-events none, 
+  reviewer can interact with the prototype normally
+
+On overlay click (comment mode ON):
+- Calculate x% and y% relative to overlay dimensions
+- Show popup at click position
+- Popup: raw textarea (no border radius, 2px max), 
+  "SAVE" and "CANCEL" in monospace
+- ESC cancels, Enter saves (Shift+Enter for newline)
+
+Comment bubbles on overlay:
+- Square shape with bottom-left corner notch
+- 24x24px, accent color background #5b7cf6
+- White monospace number inside
+- Position at x% y% using position absolute
+- Resolved bubbles: #222 background, muted number
+- Clicking a bubble highlights its card in the panel
+
+Right panel:
+- Header: "COMMENTS" left, count right "// 4"
+- Each comment card:
+  - Left border 2px solid accent (unresolved) 
+    or #333 (resolved)
+  - Number + comment text
+  - "RESOLVE" or "REOPEN" button — monospace, no radius
+  - "✕" delete button far right
+  - No border radius anywhere
+- Empty state: "// NO COMMENTS YET"
+- Bottom: "→ COPY ALL FOR CLAUDE" full width button
+
+Copy format:
+"Feedback on [projectName] — [fileName] — [n] comments:
+
+#1 — [comment text]
+#2 — [comment text]"
+
+SHARE BUTTON behaviour on index.html:
+Copies the full URL to clipboard: 
+https://[REPLIT-DOMAIN]/view?id=ID
+Shows "// COPIED" for 2 seconds then reverts
+
+DESIGN SYSTEM — non negotiable:
+- Background: #0a0a0a
+- Surface: #111111  
+- Border: #222222
+- Accent: #5b7cf6
+- Text primary: #f0f0f0
+- Text muted: #444444
+- Font: "DM Mono" from Google Fonts — everywhere, 
+  body, inputs, buttons, everything
+- Zero border radius except comment popup 2px max
+- No gradients. No shadows. No blur. No glow.
+- All borders 1px solid #222 or 2px solid accent
+- Hover state on all interactive elements: 
+  border color or text switches to accent #5b7cf6
+- Active/selected: background accent, text #0a0a0a
+- Spacing: generous padding, 
+  minimum 16px gutters everywhere
+- Every button is monospace uppercase text only. 
+  No icons except ✕ for delete and → for actions.
+
+INTERACTIONS — non negotiable:
+- Comment x/y stored as percentages not pixels
+- Clicking comment card scrolls panel to card 
+  and highlights bubble with a white ring
+- Resolved comments stay visible but collapsed, 
+  greyed bubble
+- Delete prototype asks for Y/N confirm inline 
+  (no browser alert())
+- Upload feedback: show "// UPLOADING..." 
+  then "// DONE — LINK READY" in the upload row
+- All state updates are instant — 
+  no page reloads after any action
+
+REPLIT SPECIFIC:
+- Use @replit/database for all storage
+- Express serves everything from /public statically
+- Install dependencies: express, @replit/database, uuid
+- Entry point: server.js
+- Make sure /view route serves view.html 
+  so the URL /view?id=X works correctly
+- CORS not needed, same origin

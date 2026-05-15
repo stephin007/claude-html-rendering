@@ -6,8 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface PrototypeInput {
-  htmlContent: string;
-  fileName: string;
-  projectName: string;
+export interface DeleteResult {
+  success: boolean;
 }

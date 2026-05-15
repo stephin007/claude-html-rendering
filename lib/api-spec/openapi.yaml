@@ -80,6 +80,25 @@ paths:
                 $ref: "#/components/schemas/Prototype"
         "404":
           description: Not found
+    delete:
+      operationId: deletePrototype
+      tags: [prototypes]
+      summary: Delete a prototype and all its comments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+        "404":
+          description: Not found
 
   /prototypes/{id}/comments:
     get:
@@ -127,9 +146,9 @@ paths:
 
   /comments/{id}/resolve:
     patch:
-      operationId: resolveComment
+      operationId: toggleCommentResolved
       tags: [comments]
-      summary: Mark a comment as resolved
+      summary: Toggle a comment resolved/unresolved
       parameters:
         - name: id
           in: path
@@ -138,11 +157,32 @@ paths:
             type: string
       responses:
         "200":
-          description: Comment resolved
+          description: Comment updated
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Comment"
+        "404":
+          description: Not found
+
+  /comments/{id}:
+    delete:
+      operationId: deleteComment
+      tags: [comments]
+      summary: Delete a comment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
         "404":
           description: Not found
 
@@ -156,35 +196,48 @@ components:
       required:
         - status
 
+    DeleteResult:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+
     PrototypeInput:
       type: object
-      required: [htmlContent, fileName]
+      required: [htmlContent, fileName, projectName]
       properties:
         htmlContent:
           type: string
         fileName:
           type: string
+        projectName:
+          type: string
 
     Prototype:
       type: object
-      required: [id, htmlContent, fileName, createdAt]
+      required: [id, htmlContent, fileName, projectName, createdAt]
       properties:
         id:
           type: string
         htmlContent:
           type: string
         fileName:
+          type: string
+        projectName:
           type: string
         createdAt:
           type: string
 
     PrototypeMeta:
       type: object
-      required: [id, fileName, createdAt]
+      required: [id, fileName, projectName, createdAt]
       properties:
         id:
           type: string
         fileName:
+          type: string
+        projectName:
           type: string
         createdAt:
           type: string

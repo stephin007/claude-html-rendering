@@ -21,7 +21,8 @@ export const HealthCheckResponse = zod.object({
  */
 export const CreatePrototypeBody = zod.object({
   "htmlContent": zod.string(),
-  "fileName": zod.string()
+  "fileName": zod.string(),
+  "projectName": zod.string()
 })
 
 
@@ -31,6 +32,7 @@ export const CreatePrototypeBody = zod.object({
 export const ListPrototypesResponseItem = zod.object({
   "id": zod.string(),
   "fileName": zod.string(),
+  "projectName": zod.string(),
   "createdAt": zod.string()
 })
 export const ListPrototypesResponse = zod.array(ListPrototypesResponseItem)
@@ -47,7 +49,20 @@ export const GetPrototypeResponse = zod.object({
   "id": zod.string(),
   "htmlContent": zod.string(),
   "fileName": zod.string(),
+  "projectName": zod.string(),
   "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a prototype and all its comments
+ */
+export const DeletePrototypeParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeletePrototypeResponse = zod.object({
+  "success": zod.boolean()
 })
 
 
@@ -85,13 +100,13 @@ export const CreateCommentBody = zod.object({
 
 
 /**
- * @summary Mark a comment as resolved
+ * @summary Toggle a comment resolved/unresolved
  */
-export const ResolveCommentParams = zod.object({
+export const ToggleCommentResolvedParams = zod.object({
   "id": zod.coerce.string()
 })
 
-export const ResolveCommentResponse = zod.object({
+export const ToggleCommentResolvedResponse = zod.object({
   "id": zod.string(),
   "prototypeId": zod.string(),
   "x": zod.number(),
@@ -99,6 +114,18 @@ export const ResolveCommentResponse = zod.object({
   "text": zod.string(),
   "resolved": zod.boolean(),
   "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a comment
+ */
+export const DeleteCommentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteCommentResponse = zod.object({
+  "success": zod.boolean()
 })
 
 
