@@ -37,9 +37,10 @@ HTML prototype review tool — upload an HTML file, get a shareable link, drop n
 - HTML content stored as text in PostgreSQL — no object storage needed for MVP
 - Comments polled every 3 seconds (refetchInterval) for real-time feel without websockets
 - Auth: email/password with bcrypt (cost 12), sessions stored in Postgres via connect-pg-simple, 30-day cookies
-- Public routes: GET /api/projects, GET /api/prototypes/:id, GET /api/prototypes/:id/comments, POST /api/prototypes/:id/comments (share links work without auth)
-- Protected routes (requireAuth): POST/DELETE /api/projects, POST/DELETE /api/prototypes, PATCH/DELETE /api/comments
-- Session table (`session`) must exist in Postgres — created manually if `createTableIfMissing` doesn't fire on first boot
+- Projects are owner-scoped: `projects.owner_id` references `users.id`; GET/DELETE /api/projects filter strictly by the session user — no cross-user data leakage
+- Public routes: GET /api/prototypes/:id, GET /api/prototypes/:id/comments, POST /api/prototypes/:id/comments (share links work without auth)
+- Protected routes (requireAuth): GET/POST/DELETE /api/projects, POST/DELETE /api/prototypes, PATCH/DELETE /api/comments
+- Session table (`session`) must exist in Postgres — created manually via SQL (connect-pg-simple's `createTableIfMissing` is broken in production builds). `drizzle.config.ts` uses `tablesFilter: ["!session"]` so push never drops it
 
 ## Product
 

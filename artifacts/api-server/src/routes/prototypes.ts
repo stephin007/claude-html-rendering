@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, projectsTable, prototypesTable, commentsTable, usersTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import {
   CreateProjectBody,
   GetProjectParams,
@@ -28,9 +28,10 @@ router.post("/projects", requireAuth, async (req, res) => {
     res.status(400).json({ error: "Invalid request body" });
     return;
   }
+  const ownerId = req.session.userId as string;
   const [project] = await db
     .insert(projectsTable)
-    .values({ name: parsed.data.name })
+    .values({ name: parsed.data.name, ownerId })
     .returning();
   res.status(201).json({
     id: project.id,
@@ -39,7 +40,8 @@ router.post("/projects", requireAuth, async (req, res) => {
   });
 });
 
-router.get("/projects", async (req, res) => {
+router.get("/projects", requireAuth, async (req, res) => {
+  const ownerId = req.session.userId as string;
   const rows = await db
     .select({
       id: projectsTable.id,
@@ -49,6 +51,7 @@ router.get("/projects", async (req, res) => {
     })
     .from(projectsTable)
     .leftJoin(prototypesTable, eq(prototypesTable.projectId, projectsTable.id))
+    .where(eq(projectsTable.ownerId, ownerId))
     .groupBy(projectsTable.id)
     .orderBy(projectsTable.createdAt);
   res.json(
@@ -61,16 +64,17 @@ router.get("/projects", async (req, res) => {
   );
 });
 
-router.get("/projects/:id", async (req, res) => {
+router.get("/projects/:id", requireAuth, async (req, res) => {
   const parsed = GetProjectParams.safeParse(req.params);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid params" });
     return;
   }
+  const ownerId = req.session.userId as string;
   const [project] = await db
     .select()
     .from(projectsTable)
-    .where(eq(projectsTable.id, parsed.data.id))
+    .where(and(eq(projectsTable.id, parsed.data.id), eq(projectsTable.ownerId, ownerId)))
     .limit(1);
   if (!project) {
     res.status(404).json({ error: "Project not found" });
@@ -107,9 +111,10 @@ router.delete("/projects/:id", requireAuth, async (req, res) => {
     res.status(400).json({ error: "Invalid params" });
     return;
   }
+  const ownerId = req.session.userId as string;
   const [deleted] = await db
     .delete(projectsTable)
-    .where(eq(projectsTable.id, parsed.data.id))
+    .where(and(eq(projectsTable.id, parsed.data.id), eq(projectsTable.ownerId, ownerId)))
     .returning();
   if (!deleted) {
     res.status(404).json({ error: "Project not found" });

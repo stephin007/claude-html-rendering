@@ -14,12 +14,14 @@ export type User = typeof usersTable.$inferSelect;
 export const projectsTable = pgTable("projects", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   name: text("name").notNull(),
+  ownerId: text("owner_id").references(() => usersTable.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const insertProjectSchema = createInsertSchema(projectsTable).omit({
   id: true,
   createdAt: true,
+  ownerId: true,
 });
 
 export type InsertProject = z.infer<typeof insertProjectSchema>;
