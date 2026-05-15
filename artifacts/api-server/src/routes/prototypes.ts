@@ -120,7 +120,8 @@ router.delete("/projects/:id", async (req, res) => {
 router.post("/prototypes", async (req, res) => {
   const parsed = CreatePrototypeBody.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "Invalid request body" });
+    req.log.warn({ issues: parsed.error.issues, body: Object.keys(req.body ?? {}) }, "createPrototype validation failed");
+    res.status(400).json({ error: "Invalid request body", issues: parsed.error.issues });
     return;
   }
   const { htmlContent, fileName, projectId } = parsed.data;
