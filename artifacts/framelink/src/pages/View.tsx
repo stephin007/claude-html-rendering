@@ -277,6 +277,10 @@ export default function View() {
                   onClick={(e) => {
                     e.stopPropagation();
                     setActiveCommentId(comment.id);
+                    const node = cardRefs.current.get(comment.id);
+                    if (node) {
+                      node.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                    }
                   }}
                   data-testid={`bubble-${comment.id}`}
                 >
