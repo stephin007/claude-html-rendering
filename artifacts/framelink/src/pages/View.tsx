@@ -127,7 +127,7 @@ export default function View() {
     <div className="h-screen w-full flex flex-col font-mono bg-background text-foreground overflow-hidden">
       {/* Topbar */}
       <header className="h-16 flex items-center justify-between px-6 border-b border-border shrink-0">
-        <Link href="/" className="text-lg lowercase interactive-element p-1 px-2 border border-transparent -ml-2" data-testid="link-home">
+        <Link href={prototype.projectId ? `/project/${prototype.projectId}` : "/"} className="text-lg lowercase interactive-element p-1 px-2 border border-transparent -ml-2" data-testid="link-home">
           framelink
         </Link>
         <div className="text-muted-foreground uppercase tracking-widest text-sm">

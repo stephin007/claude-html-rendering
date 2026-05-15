@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: projects
+    description: Project operations
   - name: prototypes
     description: Prototype operations
   - name: comments
@@ -28,11 +30,83 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
+  /projects:
+    post:
+      operationId: createProject
+      tags: [projects]
+      summary: Create a new project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+    get:
+      operationId: listProjects
+      tags: [projects]
+      summary: List all projects
+      responses:
+        "200":
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProjectMeta"
+
+  /projects/{id}:
+    get:
+      operationId: getProject
+      tags: [projects]
+      summary: Get a project with its files
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Project found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectDetail"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteProject
+      tags: [projects]
+      summary: Delete a project and all its files
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+        "404":
+          description: Not found
+
   /prototypes:
     post:
       operationId: createPrototype
       tags: [prototypes]
-      summary: Upload an HTML prototype
+      summary: Upload an HTML file to a project
       requestBody:
         required: true
         content:
@@ -203,20 +277,66 @@ components:
         success:
           type: boolean
 
+    ProjectInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+
+    Project:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        createdAt:
+          type: string
+
+    ProjectMeta:
+      type: object
+      required: [id, name, fileCount, createdAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        fileCount:
+          type: integer
+        createdAt:
+          type: string
+
+    ProjectDetail:
+      type: object
+      required: [id, name, createdAt, prototypes]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        createdAt:
+          type: string
+        prototypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/PrototypeMeta"
+
     PrototypeInput:
       type: object
-      required: [htmlContent, fileName, projectName]
+      required: [htmlContent, fileName, projectId]
       properties:
         htmlContent:
           type: string
         fileName:
           type: string
-        projectName:
+        projectId:
           type: string
 
     Prototype:
       type: object
-      required: [id, htmlContent, fileName, projectName, createdAt]
+      required: [id, htmlContent, fileName, projectName, projectId, createdAt]
       properties:
         id:
           type: string
@@ -225,19 +345,23 @@ components:
         fileName:
           type: string
         projectName:
+          type: string
+        projectId:
           type: string
         createdAt:
           type: string
 
     PrototypeMeta:
       type: object
-      required: [id, fileName, projectName, createdAt]
+      required: [id, fileName, projectName, projectId, createdAt]
       properties:
         id:
           type: string
         fileName:
           type: string
         projectName:
+          type: string
+        projectId:
           type: string
         createdAt:
           type: string

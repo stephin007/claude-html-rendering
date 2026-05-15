@@ -11,5 +11,6 @@ export interface Prototype {
   htmlContent: string;
   fileName: string;
   projectName: string;
+  projectId: string;
   createdAt: string;
 }

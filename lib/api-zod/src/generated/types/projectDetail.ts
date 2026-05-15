@@ -5,11 +5,11 @@
  * Framelink API
  * OpenAPI spec version: 0.1.0
  */
+import type { PrototypeMeta } from './prototypeMeta';
 
-export interface PrototypeMeta {
+export interface ProjectDetail {
   id: string;
-  fileName: string;
-  projectName: string;
-  projectId: string;
+  name: string;
   createdAt: string;
+  prototypes: PrototypeMeta[];
 }

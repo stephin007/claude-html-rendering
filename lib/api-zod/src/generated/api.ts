@@ -17,12 +17,65 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
- * @summary Upload an HTML prototype
+ * @summary Create a new project
+ */
+export const CreateProjectBody = zod.object({
+  "name": zod.string()
+})
+
+
+/**
+ * @summary List all projects
+ */
+export const ListProjectsResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "fileCount": zod.number(),
+  "createdAt": zod.string()
+})
+export const ListProjectsResponse = zod.array(ListProjectsResponseItem)
+
+
+/**
+ * @summary Get a project with its files
+ */
+export const GetProjectParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetProjectResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "createdAt": zod.string(),
+  "prototypes": zod.array(zod.object({
+  "id": zod.string(),
+  "fileName": zod.string(),
+  "projectName": zod.string(),
+  "projectId": zod.string(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Delete a project and all its files
+ */
+export const DeleteProjectParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteProjectResponse = zod.object({
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary Upload an HTML file to a project
  */
 export const CreatePrototypeBody = zod.object({
   "htmlContent": zod.string(),
   "fileName": zod.string(),
-  "projectName": zod.string()
+  "projectId": zod.string()
 })
 
 
@@ -33,6 +86,7 @@ export const ListPrototypesResponseItem = zod.object({
   "id": zod.string(),
   "fileName": zod.string(),
   "projectName": zod.string(),
+  "projectId": zod.string(),
   "createdAt": zod.string()
 })
 export const ListPrototypesResponse = zod.array(ListPrototypesResponseItem)
@@ -50,6 +104,7 @@ export const GetPrototypeResponse = zod.object({
   "htmlContent": zod.string(),
   "fileName": zod.string(),
   "projectName": zod.string(),
+  "projectId": zod.string(),
   "createdAt": zod.string()
 })
 

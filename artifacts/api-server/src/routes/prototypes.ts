@@ -1,7 +1,10 @@
 import { Router } from "express";
-import { db, prototypesTable, commentsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, projectsTable, prototypesTable, commentsTable } from "@workspace/db";
+import { eq, sql } from "drizzle-orm";
 import {
+  CreateProjectBody,
+  GetProjectParams,
+  DeleteProjectParams,
   CreatePrototypeBody,
   GetPrototypeParams,
   DeletePrototypeParams,
@@ -14,42 +17,153 @@ import {
 
 const router = Router();
 
+// ── Projects ──────────────────────────────────────────────────────────────────
+
+router.post("/projects", async (req, res) => {
+  const parsed = CreateProjectBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request body" });
+    return;
+  }
+  const [project] = await db
+    .insert(projectsTable)
+    .values({ name: parsed.data.name })
+    .returning();
+  res.status(201).json({
+    id: project.id,
+    name: project.name,
+    createdAt: project.createdAt.toISOString(),
+  });
+});
+
+router.get("/projects", async (req, res) => {
+  const rows = await db
+    .select({
+      id: projectsTable.id,
+      name: projectsTable.name,
+      createdAt: projectsTable.createdAt,
+      fileCount: sql<number>`count(${prototypesTable.id})::int`,
+    })
+    .from(projectsTable)
+    .leftJoin(prototypesTable, eq(prototypesTable.projectId, projectsTable.id))
+    .groupBy(projectsTable.id)
+    .orderBy(projectsTable.createdAt);
+  res.json(
+    rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      fileCount: r.fileCount,
+      createdAt: r.createdAt.toISOString(),
+    }))
+  );
+});
+
+router.get("/projects/:id", async (req, res) => {
+  const parsed = GetProjectParams.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid params" });
+    return;
+  }
+  const [project] = await db
+    .select()
+    .from(projectsTable)
+    .where(eq(projectsTable.id, parsed.data.id))
+    .limit(1);
+  if (!project) {
+    res.status(404).json({ error: "Project not found" });
+    return;
+  }
+  const files = await db
+    .select({
+      id: prototypesTable.id,
+      fileName: prototypesTable.fileName,
+      projectName: prototypesTable.projectName,
+      projectId: prototypesTable.projectId,
+      createdAt: prototypesTable.createdAt,
+    })
+    .from(prototypesTable)
+    .where(eq(prototypesTable.projectId, parsed.data.id))
+    .orderBy(prototypesTable.createdAt);
+  res.json({
+    id: project.id,
+    name: project.name,
+    createdAt: project.createdAt.toISOString(),
+    prototypes: files.map((f) => ({
+      id: f.id,
+      fileName: f.fileName,
+      projectName: f.projectName,
+      projectId: f.projectId ?? "",
+      createdAt: f.createdAt.toISOString(),
+    })),
+  });
+});
+
+router.delete("/projects/:id", async (req, res) => {
+  const parsed = DeleteProjectParams.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid params" });
+    return;
+  }
+  const [deleted] = await db
+    .delete(projectsTable)
+    .where(eq(projectsTable.id, parsed.data.id))
+    .returning();
+  if (!deleted) {
+    res.status(404).json({ error: "Project not found" });
+    return;
+  }
+  res.json({ success: true });
+});
+
+// ── Prototypes ────────────────────────────────────────────────────────────────
+
 router.post("/prototypes", async (req, res) => {
   const parsed = CreatePrototypeBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request body" });
     return;
   }
-  const { htmlContent, fileName, projectName } = parsed.data;
+  const { htmlContent, fileName, projectId } = parsed.data;
+  // Resolve project name for denormalised field
+  const [project] = await db
+    .select()
+    .from(projectsTable)
+    .where(eq(projectsTable.id, projectId))
+    .limit(1);
+  const projectName = project?.name ?? "";
+
   const [prototype] = await db
     .insert(prototypesTable)
-    .values({ htmlContent, fileName, projectName })
+    .values({ htmlContent, fileName, projectId, projectName })
     .returning();
   res.status(201).json({
     id: prototype.id,
     htmlContent: prototype.htmlContent,
     fileName: prototype.fileName,
     projectName: prototype.projectName,
+    projectId: prototype.projectId ?? "",
     createdAt: prototype.createdAt.toISOString(),
   });
 });
 
 router.get("/prototypes", async (req, res) => {
-  const prototypes = await db
+  const rows = await db
     .select({
       id: prototypesTable.id,
       fileName: prototypesTable.fileName,
       projectName: prototypesTable.projectName,
+      projectId: prototypesTable.projectId,
       createdAt: prototypesTable.createdAt,
     })
     .from(prototypesTable)
     .orderBy(prototypesTable.createdAt)
     .limit(50);
   res.json(
-    prototypes.map((p) => ({
+    rows.map((p) => ({
       id: p.id,
       fileName: p.fileName,
       projectName: p.projectName,
+      projectId: p.projectId ?? "",
       createdAt: p.createdAt.toISOString(),
     }))
   );
@@ -75,6 +189,7 @@ router.get("/prototypes/:id", async (req, res) => {
     htmlContent: prototype.htmlContent,
     fileName: prototype.fileName,
     projectName: prototype.projectName,
+    projectId: prototype.projectId ?? "",
     createdAt: prototype.createdAt.toISOString(),
   });
 });
@@ -95,6 +210,8 @@ router.delete("/prototypes/:id", async (req, res) => {
   }
   res.json({ success: true });
 });
+
+// ── Comments ──────────────────────────────────────────────────────────────────
 
 router.get("/prototypes/:id/comments", async (req, res) => {
   const parsed = GetCommentsParams.safeParse(req.params);

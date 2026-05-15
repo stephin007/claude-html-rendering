@@ -6,10 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface PrototypeMeta {
+export interface ProjectMeta {
   id: string;
-  fileName: string;
-  projectName: string;
-  projectId: string;
+  name: string;
+  fileCount: number;
   createdAt: string;
 }

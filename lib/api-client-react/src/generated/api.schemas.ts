@@ -13,17 +13,20 @@ export interface DeleteResult {
   success: boolean;
 }
 
-export interface PrototypeInput {
-  htmlContent: string;
-  fileName: string;
-  projectName: string;
+export interface ProjectInput {
+  name: string;
 }
 
-export interface Prototype {
+export interface Project {
   id: string;
-  htmlContent: string;
-  fileName: string;
-  projectName: string;
+  name: string;
+  createdAt: string;
+}
+
+export interface ProjectMeta {
+  id: string;
+  name: string;
+  fileCount: number;
   createdAt: string;
 }
 
@@ -31,6 +34,29 @@ export interface PrototypeMeta {
   id: string;
   fileName: string;
   projectName: string;
+  projectId: string;
+  createdAt: string;
+}
+
+export interface ProjectDetail {
+  id: string;
+  name: string;
+  createdAt: string;
+  prototypes: PrototypeMeta[];
+}
+
+export interface PrototypeInput {
+  htmlContent: string;
+  fileName: string;
+  projectId: string;
+}
+
+export interface Prototype {
+  id: string;
+  htmlContent: string;
+  fileName: string;
+  projectName: string;
+  projectId: string;
   createdAt: string;
 }
 
