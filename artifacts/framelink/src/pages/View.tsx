@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useParams, Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -117,8 +117,10 @@ export default function View() {
     navigator.clipboard.writeText(text);
   };
 
-  const blob = new Blob([prototype.htmlContent], { type: "text/html" });
-  const blobUrl = URL.createObjectURL(blob);
+  const blobUrl = useMemo(() => {
+    const blob = new Blob([prototype.htmlContent], { type: "text/html" });
+    return URL.createObjectURL(blob);
+  }, [prototype.htmlContent]);
 
   return (
     <div className="h-screen w-full flex flex-col font-mono bg-background text-foreground overflow-hidden">
