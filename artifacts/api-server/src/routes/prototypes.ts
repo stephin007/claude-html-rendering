@@ -14,12 +14,13 @@ import {
   ToggleCommentResolvedParams,
   DeleteCommentParams,
 } from "@workspace/api-zod";
+import { requireAuth } from "../middlewares/requireAuth";
 
 const router = Router();
 
 // ── Projects ──────────────────────────────────────────────────────────────────
 
-router.post("/projects", async (req, res) => {
+router.post("/projects", requireAuth, async (req, res) => {
   const parsed = CreateProjectBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request body" });
@@ -98,7 +99,7 @@ router.get("/projects/:id", async (req, res) => {
   });
 });
 
-router.delete("/projects/:id", async (req, res) => {
+router.delete("/projects/:id", requireAuth, async (req, res) => {
   const parsed = DeleteProjectParams.safeParse(req.params);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid params" });
@@ -117,7 +118,7 @@ router.delete("/projects/:id", async (req, res) => {
 
 // ── Prototypes ────────────────────────────────────────────────────────────────
 
-router.post("/prototypes", async (req, res) => {
+router.post("/prototypes", requireAuth, async (req, res) => {
   const parsed = CreatePrototypeBody.safeParse(req.body);
   if (!parsed.success) {
     req.log.warn({ issues: parsed.error.issues, body: Object.keys(req.body ?? {}) }, "createPrototype validation failed");
@@ -195,7 +196,7 @@ router.get("/prototypes/:id", async (req, res) => {
   });
 });
 
-router.delete("/prototypes/:id", async (req, res) => {
+router.delete("/prototypes/:id", requireAuth, async (req, res) => {
   const parsed = DeletePrototypeParams.safeParse(req.params);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid params" });
@@ -265,7 +266,7 @@ router.post("/prototypes/:id/comments", async (req, res) => {
   });
 });
 
-router.patch("/comments/:id/resolve", async (req, res) => {
+router.patch("/comments/:id/resolve", requireAuth, async (req, res) => {
   const parsed = ToggleCommentResolvedParams.safeParse(req.params);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid params" });
@@ -296,7 +297,7 @@ router.patch("/comments/:id/resolve", async (req, res) => {
   });
 });
 
-router.delete("/comments/:id", async (req, res) => {
+router.delete("/comments/:id", requireAuth, async (req, res) => {
   const parsed = DeleteCommentParams.safeParse(req.params);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid params" });

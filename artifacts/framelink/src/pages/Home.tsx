@@ -8,10 +8,12 @@ import {
   useDeleteProject,
   getListProjectsQueryKey
 } from "@workspace/api-client-react";
+import { useAuthContext } from "@/context/AuthContext";
 
 export default function Home() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const { user, signOut } = useAuthContext();
   const [isDragging, setIsDragging] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -82,8 +84,21 @@ export default function Home() {
       <div className="w-full max-w-5xl flex flex-col h-full grow">
         <header className="mb-16 flex justify-between items-end border-b border-border pb-4">
           <h1 className="text-xl font-normal lowercase tracking-widest text-foreground">framelink</h1>
-          <div className="text-muted-foreground uppercase tracking-wider text-sm">
-            {projects ? `// ${projects.length} PROJECTS` : ""}
+          <div className="flex items-center gap-6">
+            <span className="text-muted-foreground uppercase tracking-wider text-sm hidden sm:block">
+              {projects ? `// ${projects.length} PROJECTS` : ""}
+            </span>
+            {user && (
+              <div className="flex items-center gap-4">
+                <span className="text-xs text-muted-foreground truncate max-w-[160px] hidden md:block">{user.email}</span>
+                <button
+                  onClick={async () => { await signOut(); }}
+                  className="text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  SIGN OUT
+                </button>
+              </div>
+            )}
           </div>
         </header>
 

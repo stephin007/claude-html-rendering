@@ -24,22 +24,29 @@ HTML prototype review tool — upload an HTML file, get a shareable link, drop n
 
 ## Where things live
 
-- DB schema: `lib/db/src/schema/prototypes.ts` — prototypes + comments tables
+- DB schema: `lib/db/src/schema/prototypes.ts` — prototypes + comments + users tables
 - API contract: `lib/api-spec/openapi.yaml`
-- API routes: `artifacts/api-server/src/routes/prototypes.ts`
+- API routes: `artifacts/api-server/src/routes/prototypes.ts`, `auth.ts`
+- Auth middleware: `artifacts/api-server/src/middlewares/requireAuth.ts`
 - Frontend pages: `artifacts/framelink/src/pages/`
+- Auth context: `artifacts/framelink/src/context/AuthContext.tsx`
 
 ## Architecture decisions
 
 - Coordinates for comment bubbles stored as percentages (x/y as floats 0-1) so they render correctly at any screen size
 - HTML content stored as text in PostgreSQL — no object storage needed for MVP
 - Comments polled every 3 seconds (refetchInterval) for real-time feel without websockets
-- No auth — share links are public by UUID; anyone with the link can view + comment
+- Auth: email/password with bcrypt (cost 12), sessions stored in Postgres via connect-pg-simple, 30-day cookies
+- Public routes: GET /api/projects, GET /api/prototypes/:id, GET /api/prototypes/:id/comments, POST /api/prototypes/:id/comments (share links work without auth)
+- Protected routes (requireAuth): POST/DELETE /api/projects, POST/DELETE /api/prototypes, PATCH/DELETE /api/comments
+- Session table (`session`) must exist in Postgres — created manually if `createTableIfMissing` doesn't fire on first boot
 
 ## Product
 
-- Upload page (`/`): drag-and-drop HTML file upload, recent uploads list
+- Landing page (`/`): public-facing hero for unauthenticated users
+- Upload page (`/`): drag-and-drop HTML file upload, recent uploads list (authenticated)
 - Review page (`/view/:id`): iframe rendering of the HTML design, comment overlay with click-to-pin numbered bubbles, right panel with comment list and "Copy all for Claude" button
+- Sign in (`/sign-in`) / Sign up (`/sign-up`): email+password auth forms
 
 ## User preferences
 
