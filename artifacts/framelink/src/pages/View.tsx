@@ -45,6 +45,12 @@ export default function View() {
     }
   }, [popup]);
 
+  const blobUrl = useMemo(() => {
+    if (!prototype?.htmlContent) return "";
+    const blob = new Blob([prototype.htmlContent], { type: "text/html" });
+    return URL.createObjectURL(blob);
+  }, [prototype?.htmlContent]);
+
   if (!prototype) return <div className="p-8 font-mono">LOADING...</div>;
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -116,11 +122,6 @@ export default function View() {
       .join("\n")}`;
     navigator.clipboard.writeText(text);
   };
-
-  const blobUrl = useMemo(() => {
-    const blob = new Blob([prototype.htmlContent], { type: "text/html" });
-    return URL.createObjectURL(blob);
-  }, [prototype.htmlContent]);
 
   return (
     <div className="h-screen w-full flex flex-col font-mono bg-background text-foreground overflow-hidden">
