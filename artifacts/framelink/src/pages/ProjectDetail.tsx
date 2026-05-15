@@ -147,7 +147,13 @@ export default function ProjectDetail() {
                     data-testid={`row-prototype-${p.id}`}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 flex-grow min-w-0 mr-4">
-                      <span className="font-bold text-accent truncate">{p.fileName}</span>
+                      <Link
+                        href={`/view/${p.id}`}
+                        className="font-bold text-accent truncate hover:underline underline-offset-2 interactive-element"
+                        data-testid={`link-prototype-${p.id}`}
+                      >
+                        {p.fileName}
+                      </Link>
                       <span className="text-muted-foreground truncate hidden sm:inline">|</span>
                       <span className="text-muted-foreground text-sm">{new Date(p.createdAt).toLocaleDateString()}</span>
                     </div>

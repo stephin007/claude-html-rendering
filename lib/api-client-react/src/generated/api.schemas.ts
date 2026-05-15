@@ -66,6 +66,10 @@ export interface CommentInput {
   text: string;
 }
 
+export interface CommentUpdateInput {
+  text: string;
+}
+
 export interface Comment {
   id: string;
   prototypeId: string;

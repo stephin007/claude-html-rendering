@@ -13,6 +13,7 @@ import {
   CreateCommentBody,
   ToggleCommentResolvedParams,
   DeleteCommentParams,
+  UpdateCommentBody,
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/requireAuth";
 
@@ -284,6 +285,42 @@ router.patch("/comments/:id/resolve", requireAuth, async (req, res) => {
   const [comment] = await db
     .update(commentsTable)
     .set({ resolved: !existing.resolved })
+    .where(eq(commentsTable.id, parsed.data.id))
+    .returning();
+  res.json({
+    id: comment.id,
+    prototypeId: comment.prototypeId,
+    x: comment.x,
+    y: comment.y,
+    text: comment.text,
+    resolved: comment.resolved,
+    createdAt: comment.createdAt.toISOString(),
+  });
+});
+
+router.patch("/comments/:id", requireAuth, async (req, res) => {
+  const parsed = DeleteCommentParams.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid params" });
+    return;
+  }
+  const bodyParsed = UpdateCommentBody.safeParse(req.body);
+  if (!bodyParsed.success) {
+    res.status(400).json({ error: "Invalid request body" });
+    return;
+  }
+  const [existing] = await db
+    .select()
+    .from(commentsTable)
+    .where(eq(commentsTable.id, parsed.data.id))
+    .limit(1);
+  if (!existing) {
+    res.status(404).json({ error: "Comment not found" });
+    return;
+  }
+  const [comment] = await db
+    .update(commentsTable)
+    .set({ text: bodyParsed.data.text })
     .where(eq(commentsTable.id, parsed.data.id))
     .returning();
   res.json({

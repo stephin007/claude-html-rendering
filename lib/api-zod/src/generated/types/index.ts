@@ -8,6 +8,7 @@
 
 export * from './comment';
 export * from './commentInput';
+export * from './commentUpdateInput';
 export * from './deleteResult';
 export * from './healthStatus';
 export * from './project';

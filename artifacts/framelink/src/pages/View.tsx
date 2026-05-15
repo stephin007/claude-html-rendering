@@ -7,6 +7,7 @@ import {
   useCreateComment,
   useToggleCommentResolved,
   useDeleteComment,
+  useUpdateComment,
   getGetPrototypeQueryKey,
   getGetCommentsQueryKey,
 } from "@workspace/api-client-react";
@@ -14,14 +15,20 @@ import {
 export default function View() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
-  
+
   const [commentMode, setCommentMode] = useState(false);
   const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
-  
+  const [hoveredBubbleId, setHoveredBubbleId] = useState<string | null>(null);
+
   // New comment popup state
   const [popup, setPopup] = useState<{ x: number; y: number } | null>(null);
   const [newCommentText, setNewCommentText] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Edit state
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+  const editRef = useRef<HTMLTextAreaElement>(null);
 
   const { data: prototype } = useGetPrototype(id, {
     query: { enabled: !!id, queryKey: getGetPrototypeQueryKey(id) },
@@ -38,12 +45,20 @@ export default function View() {
   const createComment = useCreateComment();
   const toggleResolved = useToggleCommentResolved();
   const deleteComment = useDeleteComment();
+  const updateComment = useUpdateComment();
 
   useEffect(() => {
     if (popup && inputRef.current) {
       inputRef.current.focus();
     }
   }, [popup]);
+
+  useEffect(() => {
+    if (editingCommentId && editRef.current) {
+      editRef.current.focus();
+      editRef.current.select();
+    }
+  }, [editingCommentId]);
 
   const blobUrl = useMemo(() => {
     if (!prototype?.htmlContent) return "";
@@ -55,15 +70,14 @@ export default function View() {
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!commentMode) return;
-    
-    // Don't trigger if clicking on an existing bubble
-    if ((e.target as HTMLElement).closest('.comment-bubble')) return;
-    if ((e.target as HTMLElement).closest('.comment-popup')) return;
+
+    if ((e.target as HTMLElement).closest(".comment-bubble")) return;
+    if ((e.target as HTMLElement).closest(".comment-popup")) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
+
     const percentX = (x / rect.width) * 100;
     const percentY = (y / rect.height) * 100;
 
@@ -73,7 +87,7 @@ export default function View() {
 
   const handleSaveComment = () => {
     if (!popup || !newCommentText.trim()) return;
-    
+
     createComment.mutate(
       {
         id,
@@ -87,6 +101,7 @@ export default function View() {
         onSuccess: () => {
           setPopup(null);
           setNewCommentText("");
+          queryClient.invalidateQueries({ queryKey: getGetCommentsQueryKey(id) });
         },
       }
     );
@@ -99,7 +114,7 @@ export default function View() {
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetCommentsQueryKey(id) });
-        }
+        },
       }
     );
   };
@@ -111,9 +126,36 @@ export default function View() {
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetCommentsQueryKey(id) });
-        }
+        },
       }
     );
+  };
+
+  const startEdit = (commentId: string, currentText: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingCommentId(commentId);
+    setEditText(currentText);
+  };
+
+  const handleSaveEdit = (commentId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!editText.trim()) return;
+    updateComment.mutate(
+      { id: commentId, data: { text: editText.trim() } },
+      {
+        onSuccess: () => {
+          setEditingCommentId(null);
+          setEditText("");
+          queryClient.invalidateQueries({ queryKey: getGetCommentsQueryKey(id) });
+        },
+      }
+    );
+  };
+
+  const handleCancelEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingCommentId(null);
+    setEditText("");
   };
 
   const copyForClaude = () => {
@@ -127,11 +169,23 @@ export default function View() {
     <div className="h-screen w-full flex flex-col font-mono bg-background text-foreground overflow-hidden">
       {/* Topbar */}
       <header className="h-16 flex items-center justify-between px-6 border-b border-border shrink-0">
-        <Link href={prototype.projectId ? `/project/${prototype.projectId}` : "/"} className="text-lg lowercase interactive-element p-1 px-2 border border-transparent -ml-2" data-testid="link-home">
+        <Link
+          href={prototype.projectId ? `/project/${prototype.projectId}` : "/"}
+          className="text-lg lowercase interactive-element p-1 px-2 border border-transparent -ml-2"
+          data-testid="link-home"
+        >
           framelink
         </Link>
-        <div className="text-muted-foreground uppercase tracking-widest text-sm">
-          <span className="text-foreground font-bold">{prototype.projectName}</span> / {prototype.fileName}
+        <div className="text-muted-foreground uppercase tracking-widest text-sm flex items-center gap-2">
+          <Link
+            href={prototype.projectId ? `/project/${prototype.projectId}` : "/"}
+            className="text-foreground font-bold hover:text-accent interactive-element transition-colors"
+            data-testid="link-project-name"
+          >
+            {prototype.projectName}
+          </Link>
+          <span>/</span>
+          <span>{prototype.fileName}</span>
         </div>
         <button
           onClick={() => {
@@ -139,8 +193,8 @@ export default function View() {
             setPopup(null);
           }}
           className={`px-4 py-2 border uppercase tracking-wider interactive-element text-sm ${
-            commentMode 
-              ? "bg-accent text-background border-accent" 
+            commentMode
+              ? "bg-accent text-background border-accent"
               : "border-border text-foreground hover:border-accent"
           }`}
           data-testid="btn-toggle-comment"
@@ -158,7 +212,7 @@ export default function View() {
             title="Prototype View"
             sandbox="allow-scripts allow-same-origin"
           />
-          
+
           <div
             className="absolute inset-0 z-10"
             style={{ pointerEvents: commentMode ? "auto" : "none" }}
@@ -168,33 +222,54 @@ export default function View() {
             {comments.map((comment, idx) => (
               <div
                 key={comment.id}
-                className={`comment-bubble absolute -translate-x-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center cursor-pointer
-                  ${comment.resolved ? "bg-[#444444] text-gray-300" : "bg-accent text-background"}
-                  ${activeCommentId === comment.id ? "ring-2 ring-white ring-offset-2 ring-offset-background" : ""}
-                `}
+                className="comment-bubble absolute"
                 style={{
                   left: `${comment.x}%`,
                   top: `${comment.y}%`,
-                  clipPath: "polygon(0 0, 100% 0, 100% 100%, 25% 100%, 0 75%)",
+                  transform: "translate(-50%, -50%)",
                   pointerEvents: "auto",
                   zIndex: activeCommentId === comment.id ? 50 : 20,
                 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActiveCommentId(comment.id);
-                }}
-                data-testid={`bubble-${comment.id}`}
+                onMouseEnter={() => setHoveredBubbleId(comment.id)}
+                onMouseLeave={() => setHoveredBubbleId(null)}
               >
-                <span className="text-xs font-bold">{idx + 1}</span>
+                {/* Bubble */}
+                <div
+                  className={`w-6 h-6 flex items-center justify-center cursor-pointer
+                    ${comment.resolved ? "bg-[#444444] text-gray-300" : "bg-accent text-background"}
+                    ${activeCommentId === comment.id ? "ring-2 ring-white ring-offset-2 ring-offset-background" : ""}
+                  `}
+                  style={{
+                    clipPath: "polygon(0 0, 100% 0, 100% 100%, 25% 100%, 0 75%)",
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveCommentId(comment.id);
+                  }}
+                  data-testid={`bubble-${comment.id}`}
+                >
+                  <span className="text-xs font-bold">{idx + 1}</span>
+                </div>
+
+                {/* Hover tooltip */}
+                {hoveredBubbleId === comment.id && (
+                  <div
+                    className="absolute left-7 top-0 z-50 bg-background border border-border px-2 py-1 text-xs text-foreground whitespace-pre-wrap max-w-[220px] shadow-lg pointer-events-none"
+                    style={{ minWidth: "120px" }}
+                  >
+                    {comment.text}
+                  </div>
+                )}
               </div>
             ))}
 
             {popup && (
               <div
-                className="comment-popup absolute z-50 bg-surface border border-border p-3 shadow-2xl flex flex-col gap-3 min-w-[240px]"
+                className="comment-popup absolute z-50 border border-border p-3 shadow-2xl flex flex-col gap-3 min-w-[240px]"
                 style={{
                   left: `${popup.x}%`,
                   top: `${popup.y}%`,
+                  backgroundColor: "#0a0a0a",
                   borderRadius: "0px",
                 }}
                 onClick={(e) => e.stopPropagation()}
@@ -236,7 +311,7 @@ export default function View() {
         </main>
 
         {/* Sidebar */}
-        <aside className="w-[320px] shrink-0 border-l border-border bg-surface flex flex-col">
+        <aside className="w-[320px] shrink-0 border-l border-border bg-background flex flex-col">
           <div className="p-4 border-b border-border flex items-center justify-between shrink-0">
             <h2 className="tracking-widest uppercase text-sm font-bold">COMMENTS</h2>
             <span className="text-muted-foreground text-sm">{comments.length}</span>
@@ -247,49 +322,115 @@ export default function View() {
               <div
                 key={comment.id}
                 className={`p-3 border-l-2 cursor-pointer interactive-element border border-border relative group ${
-                  comment.resolved 
-                    ? "opacity-60 border-l-[#444444] bg-background/50" 
-                    : "border-l-accent bg-background"
-                } ${
-                  activeCommentId === comment.id ? "ring-1 ring-border" : ""
-                }`}
+                  comment.resolved
+                    ? "opacity-60 border-l-[#444444] bg-card"
+                    : "border-l-accent bg-card"
+                } ${activeCommentId === comment.id ? "ring-1 ring-border" : ""}`}
                 onClick={() => setActiveCommentId(comment.id)}
                 data-testid={`card-${comment.id}`}
               >
-                <div className="flex items-start gap-2 mb-2 pr-6">
-                  <span className={`w-5 h-5 shrink-0 flex items-center justify-center text-xs ${
-                    comment.resolved ? "bg-[#444444] text-gray-300" : "bg-accent text-background"
-                  }`}
-                  style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 25% 100%, 0 75%)" }}
-                  >
-                    {idx + 1}
-                  </span>
-                  <p className={`text-sm ${comment.resolved ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                    {comment.text}
-                  </p>
-                </div>
-                
-                <button
-                  onClick={(e) => handleDeleteComment(comment.id, e)}
-                  className="absolute top-2 right-2 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity interactive-element"
-                  title="Delete comment"
-                  data-testid={`btn-delete-comment-${comment.id}`}
-                >
-                  ✕
-                </button>
-                
-                <div className="flex justify-end mt-3">
-                  <button
-                    onClick={(e) => handleToggleResolve(comment.id, e)}
-                    className="text-[10px] uppercase tracking-wider text-muted-foreground border border-border px-2 py-1 interactive-element hover:border-accent hover:text-accent"
-                    data-testid={`btn-resolve-${comment.id}`}
-                  >
-                    {comment.resolved ? "REOPEN" : "RESOLVE"}
-                  </button>
-                </div>
+                {editingCommentId === comment.id ? (
+                  /* Edit mode */
+                  <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span
+                        className={`w-5 h-5 shrink-0 flex items-center justify-center text-xs ${
+                          comment.resolved ? "bg-[#444444] text-gray-300" : "bg-accent text-background"
+                        }`}
+                        style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 25% 100%, 0 75%)" }}
+                      >
+                        {idx + 1}
+                      </span>
+                      <span className="text-xs text-muted-foreground uppercase tracking-wider">Editing</span>
+                    </div>
+                    <textarea
+                      ref={editRef}
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      className="w-full bg-background border border-border text-foreground p-2 min-h-[64px] resize-none outline-none focus:border-accent text-sm"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSaveEdit(comment.id, e as unknown as React.MouseEvent);
+                        }
+                        if (e.key === "Escape") {
+                          handleCancelEdit(e as unknown as React.MouseEvent);
+                        }
+                      }}
+                      data-testid={`input-edit-comment-${comment.id}`}
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={(e) => handleCancelEdit(e)}
+                        className="px-2 py-1 text-xs border border-border text-muted-foreground hover:border-accent interactive-element"
+                        data-testid={`btn-cancel-edit-${comment.id}`}
+                      >
+                        CANCEL
+                      </button>
+                      <button
+                        onClick={(e) => handleSaveEdit(comment.id, e)}
+                        className="px-2 py-1 text-xs border border-accent bg-accent text-background hover:opacity-90 interactive-element"
+                        data-testid={`btn-save-edit-${comment.id}`}
+                      >
+                        SAVE
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Read mode */
+                  <>
+                    <div className="flex items-start gap-2 mb-2 pr-16">
+                      <span
+                        className={`w-5 h-5 shrink-0 flex items-center justify-center text-xs ${
+                          comment.resolved ? "bg-[#444444] text-gray-300" : "bg-accent text-background"
+                        }`}
+                        style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 25% 100%, 0 75%)" }}
+                      >
+                        {idx + 1}
+                      </span>
+                      <p
+                        className={`text-sm ${
+                          comment.resolved ? "line-through text-muted-foreground" : "text-foreground"
+                        }`}
+                      >
+                        {comment.text}
+                      </p>
+                    </div>
+
+                    {/* Action buttons — visible on hover */}
+                    <div className="absolute top-2 right-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={(e) => startEdit(comment.id, comment.text, e)}
+                        className="text-muted-foreground hover:text-accent interactive-element text-xs"
+                        title="Edit comment"
+                        data-testid={`btn-edit-comment-${comment.id}`}
+                      >
+                        ✎
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteComment(comment.id, e)}
+                        className="text-muted-foreground hover:text-red-500 interactive-element text-xs"
+                        title="Delete comment"
+                        data-testid={`btn-delete-comment-${comment.id}`}
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <div className="flex justify-end mt-3">
+                      <button
+                        onClick={(e) => handleToggleResolve(comment.id, e)}
+                        className="text-[10px] uppercase tracking-wider text-muted-foreground border border-border px-2 py-1 interactive-element hover:border-accent hover:text-accent"
+                        data-testid={`btn-resolve-${comment.id}`}
+                      >
+                        {comment.resolved ? "REOPEN" : "RESOLVE"}
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
-            
+
             {comments.length === 0 && (
               <div className="text-muted-foreground text-sm text-center py-8">
                 NO COMMENTS YET

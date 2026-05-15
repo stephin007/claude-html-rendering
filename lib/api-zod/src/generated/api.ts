@@ -173,6 +173,28 @@ export const ToggleCommentResolvedResponse = zod.object({
 
 
 /**
+ * @summary Update a comment's text
+ */
+export const UpdateCommentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateCommentBody = zod.object({
+  "text": zod.string()
+})
+
+export const UpdateCommentResponse = zod.object({
+  "id": zod.string(),
+  "prototypeId": zod.string(),
+  "x": zod.number(),
+  "y": zod.number(),
+  "text": zod.string(),
+  "resolved": zod.boolean(),
+  "createdAt": zod.string()
+})
+
+
+/**
  * @summary Delete a comment
  */
 export const DeleteCommentParams = zod.object({

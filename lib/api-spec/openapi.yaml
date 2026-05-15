@@ -240,6 +240,31 @@ paths:
           description: Not found
 
   /comments/{id}:
+    patch:
+      operationId: updateComment
+      tags: [comments]
+      summary: Update a comment's text
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommentUpdateInput"
+      responses:
+        "200":
+          description: Comment updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+        "404":
+          description: Not found
     delete:
       operationId: deleteComment
       tags: [comments]
@@ -374,6 +399,13 @@ components:
           type: number
         y:
           type: number
+        text:
+          type: string
+
+    CommentUpdateInput:
+      type: object
+      required: [text]
+      properties:
         text:
           type: string
 
