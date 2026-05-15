@@ -14,6 +14,7 @@ import {
   ToggleCommentResolvedParams,
   DeleteCommentParams,
   UpdateCommentBody,
+  UpdateCommentParams,
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/requireAuth";
 
@@ -299,7 +300,7 @@ router.patch("/comments/:id/resolve", requireAuth, async (req, res) => {
 });
 
 router.patch("/comments/:id", requireAuth, async (req, res) => {
-  const parsed = DeleteCommentParams.safeParse(req.params);
+  const parsed = UpdateCommentParams.safeParse(req.params);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid params" });
     return;

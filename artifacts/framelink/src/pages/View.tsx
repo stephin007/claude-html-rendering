@@ -131,14 +131,13 @@ export default function View() {
     );
   };
 
-  const startEdit = (commentId: string, currentText: string, e: React.MouseEvent) => {
+  const startEdit = (commentId: string, currentText: string, e: React.SyntheticEvent) => {
     e.stopPropagation();
     setEditingCommentId(commentId);
     setEditText(currentText);
   };
 
-  const handleSaveEdit = (commentId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const saveEdit = (commentId: string) => {
     if (!editText.trim()) return;
     updateComment.mutate(
       { id: commentId, data: { text: editText.trim() } },
@@ -152,7 +151,12 @@ export default function View() {
     );
   };
 
-  const handleCancelEdit = (e: React.MouseEvent) => {
+  const handleSaveEdit = (commentId: string, e: React.SyntheticEvent) => {
+    e.stopPropagation();
+    saveEdit(commentId);
+  };
+
+  const handleCancelEdit = (e: React.SyntheticEvent) => {
     e.stopPropagation();
     setEditingCommentId(null);
     setEditText("");
@@ -351,10 +355,11 @@ export default function View() {
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
                           e.preventDefault();
-                          handleSaveEdit(comment.id, e as unknown as React.MouseEvent);
-                        }
-                        if (e.key === "Escape") {
-                          handleCancelEdit(e as unknown as React.MouseEvent);
+                          saveEdit(comment.id);
+                        } else if (e.key === "Escape") {
+                          e.stopPropagation();
+                          setEditingCommentId(null);
+                          setEditText("");
                         }
                       }}
                       data-testid={`input-edit-comment-${comment.id}`}
@@ -392,6 +397,8 @@ export default function View() {
                         className={`text-sm ${
                           comment.resolved ? "line-through text-muted-foreground" : "text-foreground"
                         }`}
+                        onDoubleClick={(e) => startEdit(comment.id, comment.text, e)}
+                        title="Double-click to edit"
                       >
                         {comment.text}
                       </p>
