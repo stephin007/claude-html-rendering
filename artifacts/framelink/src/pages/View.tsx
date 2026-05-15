@@ -19,6 +19,7 @@ export default function View() {
   const [commentMode, setCommentMode] = useState(false);
   const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
   const [hoveredBubbleId, setHoveredBubbleId] = useState<string | null>(null);
+  const [mobileTab, setMobileTab] = useState<"design" | "comments">("design");
 
   // New comment popup state
   const [popup, setPopup] = useState<{ x: number; y: number } | null>(null);
@@ -30,15 +31,18 @@ export default function View() {
   const [editText, setEditText] = useState("");
   const editRef = useRef<HTMLTextAreaElement>(null);
 
-  // Ref map for sidebar comment cards (for scroll-into-view on bubble hover)
+  // Ref map for sidebar comment cards (for scroll-into-view on bubble hover/click)
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const setCardRef = useCallback((commentId: string) => (node: HTMLDivElement | null) => {
-    if (node) {
-      cardRefs.current.set(commentId, node);
-    } else {
-      cardRefs.current.delete(commentId);
-    }
-  }, []);
+  const setCardRef = useCallback(
+    (commentId: string) => (node: HTMLDivElement | null) => {
+      if (node) {
+        cardRefs.current.set(commentId, node);
+      } else {
+        cardRefs.current.delete(commentId);
+      }
+    },
+    []
+  );
 
   const { data: prototype } = useGetPrototype(id, {
     query: { enabled: !!id, queryKey: getGetPrototypeQueryKey(id) },
@@ -89,7 +93,6 @@ export default function View() {
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!commentMode) return;
-
     if ((e.target as HTMLElement).closest(".comment-bubble")) return;
     if ((e.target as HTMLElement).closest(".comment-popup")) return;
 
@@ -106,16 +109,8 @@ export default function View() {
 
   const handleSaveComment = () => {
     if (!popup || !newCommentText.trim()) return;
-
     createComment.mutate(
-      {
-        id,
-        data: {
-          x: popup.x,
-          y: popup.y,
-          text: newCommentText.trim(),
-        },
-      },
+      { id, data: { x: popup.x, y: popup.y, text: newCommentText.trim() } },
       {
         onSuccess: () => {
           setPopup(null);
@@ -130,11 +125,7 @@ export default function View() {
     e.stopPropagation();
     toggleResolved.mutate(
       { id: commentId },
-      {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getGetCommentsQueryKey(id) });
-        },
-      }
+      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCommentsQueryKey(id) }) }
     );
   };
 
@@ -142,11 +133,7 @@ export default function View() {
     e.stopPropagation();
     deleteComment.mutate(
       { id: commentId },
-      {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getGetCommentsQueryKey(id) });
-        },
-      }
+      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCommentsQueryKey(id) }) }
     );
   };
 
@@ -188,37 +175,214 @@ export default function View() {
     navigator.clipboard.writeText(text);
   };
 
+  // ── Comment card (shared between sidebar and mobile comments tab) ─────────────
+  const CommentCard = ({ comment, idx }: { comment: (typeof comments)[number]; idx: number }) => {
+    const isHovered = hoveredBubbleId === comment.id;
+    const isActive = activeCommentId === comment.id;
+    return (
+      <div
+        ref={setCardRef(comment.id)}
+        className={`p-3 border-l-2 cursor-pointer border border-border relative group transition-colors ${
+          comment.resolved ? "opacity-60 border-l-[#444444] bg-card" : "border-l-accent bg-card"
+        } ${isActive ? "ring-1 ring-border" : ""} ${isHovered ? "bg-accent/10 border-accent" : ""}`}
+        onClick={() => setActiveCommentId(comment.id)}
+        data-testid={`card-${comment.id}`}
+      >
+        {editingCommentId === comment.id ? (
+          <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2 mb-1">
+              <span
+                className={`w-5 h-5 shrink-0 flex items-center justify-center text-xs ${
+                  comment.resolved ? "bg-[#444444] text-gray-300" : "bg-accent text-background"
+                }`}
+                style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 25% 100%, 0 75%)" }}
+              >
+                {idx + 1}
+              </span>
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">Editing</span>
+            </div>
+            <textarea
+              ref={editRef}
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              className="w-full bg-background border border-border text-foreground p-2 min-h-[64px] resize-none outline-none focus:border-accent text-sm"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  saveEdit(comment.id);
+                } else if (e.key === "Escape") {
+                  e.stopPropagation();
+                  setEditingCommentId(null);
+                  setEditText("");
+                }
+              }}
+              data-testid={`input-edit-comment-${comment.id}`}
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={handleCancelEdit}
+                className="px-2 py-1 text-xs border border-border text-muted-foreground hover:border-accent interactive-element"
+                data-testid={`btn-cancel-edit-${comment.id}`}
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={(e) => handleSaveEdit(comment.id, e)}
+                className="px-2 py-1 text-xs border border-accent bg-accent text-background hover:opacity-90 interactive-element"
+                data-testid={`btn-save-edit-${comment.id}`}
+              >
+                SAVE
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-start gap-2 mb-2 pr-14">
+              <span
+                className={`w-5 h-5 shrink-0 flex items-center justify-center text-xs ${
+                  comment.resolved ? "bg-[#444444] text-gray-300" : "bg-accent text-background"
+                }`}
+                style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 25% 100%, 0 75%)" }}
+              >
+                {idx + 1}
+              </span>
+              <div className="flex flex-col gap-1 min-w-0">
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground truncate">
+                  {comment.authorEmail ?? "anonymous"}
+                </span>
+                <p
+                  className={`text-sm ${
+                    comment.resolved ? "line-through text-muted-foreground" : "text-foreground"
+                  }`}
+                  onDoubleClick={(e) => startEdit(comment.id, comment.text, e)}
+                  title="Double-click to edit"
+                >
+                  {comment.text}
+                </p>
+              </div>
+            </div>
+
+            {/* Action buttons — always visible on touch, hover-only on desktop */}
+            <div className="absolute top-2 right-2 flex items-center gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={(e) => startEdit(comment.id, comment.text, e)}
+                className="text-muted-foreground hover:text-accent interactive-element text-xs p-1"
+                title="Edit comment"
+                data-testid={`btn-edit-comment-${comment.id}`}
+              >
+                ✎
+              </button>
+              <button
+                onClick={(e) => handleDeleteComment(comment.id, e)}
+                className="text-muted-foreground hover:text-red-500 interactive-element text-xs p-1"
+                title="Delete comment"
+                data-testid={`btn-delete-comment-${comment.id}`}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex justify-end mt-3">
+              <button
+                onClick={(e) => handleToggleResolve(comment.id, e)}
+                className="text-[10px] uppercase tracking-wider text-muted-foreground border border-border px-2 py-1 interactive-element hover:border-accent hover:text-accent"
+                data-testid={`btn-resolve-${comment.id}`}
+              >
+                {comment.resolved ? "REOPEN" : "RESOLVE"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  // ── Comment new-popup (shared between overlay and mobile bottom-sheet) ────────
+  const NewCommentPopup = ({ fixed }: { fixed?: boolean }) => (
+    <div
+      className={`comment-popup z-50 border border-border p-3 shadow-2xl flex flex-col gap-3 ${
+        fixed
+          ? "fixed inset-x-4 bottom-24 md:hidden"
+          : "absolute min-w-[240px]"
+      }`}
+      style={
+        fixed
+          ? { backgroundColor: "#0a0a0a" }
+          : {
+              left: `${Math.min(Math.max(popup!.x, 5), 75)}%`,
+              top: `${Math.min(Math.max(popup!.y, 5), 85)}%`,
+              backgroundColor: "#0a0a0a",
+            }
+      }
+      onClick={(e) => e.stopPropagation()}
+      data-testid="popup-new-comment"
+    >
+      <textarea
+        ref={inputRef}
+        value={newCommentText}
+        onChange={(e) => setNewCommentText(e.target.value)}
+        className="w-full bg-background border border-border text-foreground p-2 min-h-[80px] resize-none outline-none focus:border-accent text-sm"
+        placeholder="Leave a comment..."
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            handleSaveComment();
+          }
+        }}
+        data-testid="input-comment"
+      />
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={() => setPopup(null)}
+          className="px-3 py-1 text-sm border border-border text-muted-foreground hover:border-accent hover:text-foreground interactive-element"
+          data-testid="btn-cancel-comment"
+        >
+          CANCEL
+        </button>
+        <button
+          onClick={handleSaveComment}
+          className="px-3 py-1 text-sm border border-accent bg-accent text-background hover:opacity-90 interactive-element"
+          data-testid="btn-save-comment"
+        >
+          SAVE
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="h-screen w-full flex flex-col font-mono bg-background text-foreground overflow-hidden">
-      {/* Topbar */}
-      <header className="h-16 flex items-center justify-between px-6 border-b border-border shrink-0">
+      {/* ── Topbar ─────────────────────────────────────────────────────────── */}
+      <header className="h-14 md:h-16 flex items-center justify-between px-3 md:px-6 border-b border-border shrink-0 gap-2">
         <Link
           href={prototype.projectId ? `/project/${prototype.projectId}` : "/"}
-          className="text-lg lowercase interactive-element p-1 px-2 border border-transparent -ml-2"
+          className="text-base md:text-lg lowercase interactive-element p-1 px-2 border border-transparent -ml-1 shrink-0"
           data-testid="link-home"
         >
           framelink
         </Link>
-        <div className="text-muted-foreground uppercase tracking-widest text-sm flex items-center gap-2">
+
+        {/* Breadcrumb — hidden on small screens */}
+        <div className="hidden md:flex text-muted-foreground uppercase tracking-widest text-sm items-center gap-2 overflow-hidden">
           <Link
             href={prototype.projectId ? `/project/${prototype.projectId}` : "/"}
-            className="text-foreground font-bold hover:text-accent interactive-element transition-colors"
+            className="text-foreground font-bold hover:text-accent interactive-element transition-colors truncate"
             data-testid="link-project-name"
           >
             {prototype.projectName}
           </Link>
-          <span>/</span>
-          <span>{prototype.fileName}</span>
+          <span className="shrink-0">/</span>
+          <span className="truncate">{prototype.fileName}</span>
         </div>
 
-        {/* Comment mode toggle — prominent with hint label */}
-        <div className="flex flex-col items-end gap-1">
+        {/* Comment mode toggle */}
+        <div className="flex flex-col items-end gap-0.5 shrink-0">
           <button
             onClick={() => {
               setCommentMode(!commentMode);
               setPopup(null);
             }}
-            className={`px-5 py-2 border-2 uppercase tracking-wider interactive-element text-sm font-bold transition-colors ${
+            className={`px-3 md:px-5 py-1.5 md:py-2 border-2 uppercase tracking-wider interactive-element text-xs md:text-sm font-bold transition-colors ${
               commentMode
                 ? "bg-accent text-background border-accent"
                 : "border-accent text-accent hover:bg-accent hover:text-background"
@@ -228,16 +392,44 @@ export default function View() {
             {commentMode ? "// COMMENTING" : "+ ADD COMMENT"}
           </button>
           {!commentMode && (
-            <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
-              click to pin feedback
+            <span className="text-[9px] md:text-[10px] text-muted-foreground uppercase tracking-widest">
+              tap to pin feedback
             </span>
           )}
         </div>
       </header>
 
+      {/* ── Mobile tab bar ─────────────────────────────────────────────────── */}
+      <div className="flex md:hidden border-b border-border shrink-0">
+        <button
+          onClick={() => setMobileTab("design")}
+          className={`flex-1 py-2 text-xs uppercase tracking-widest font-bold border-b-2 transition-colors ${
+            mobileTab === "design"
+              ? "border-accent text-accent"
+              : "border-transparent text-muted-foreground"
+          }`}
+        >
+          Design
+        </button>
+        <button
+          onClick={() => setMobileTab("comments")}
+          className={`flex-1 py-2 text-xs uppercase tracking-widest font-bold border-b-2 transition-colors ${
+            mobileTab === "comments"
+              ? "border-accent text-accent"
+              : "border-transparent text-muted-foreground"
+          }`}
+        >
+          Comments {comments.length > 0 && `(${comments.length})`}
+        </button>
+      </div>
+
       <div className="flex-1 flex overflow-hidden">
-        {/* Main Content Area */}
-        <main className="flex-1 relative bg-white">
+        {/* ── Design / Prototype pane ─────────────────────────────────────── */}
+        <main
+          className={`relative bg-white ${
+            mobileTab === "design" ? "flex-1" : "hidden"
+          } md:flex md:flex-1`}
+        >
           <iframe
             src={blobUrl}
             className="w-full h-full border-none"
@@ -245,6 +437,7 @@ export default function View() {
             sandbox="allow-scripts allow-same-origin"
           />
 
+          {/* Comment overlay */}
           <div
             className={`absolute inset-0 z-10 ${commentMode ? "cursor-crosshair" : ""}`}
             style={{ pointerEvents: commentMode ? "auto" : "none" }}
@@ -265,15 +458,12 @@ export default function View() {
                 onMouseEnter={() => setHoveredBubbleId(comment.id)}
                 onMouseLeave={() => setHoveredBubbleId(null)}
               >
-                {/* Bubble */}
                 <div
-                  className={`w-6 h-6 flex items-center justify-center cursor-pointer transition-transform
+                  className={`w-7 h-7 md:w-6 md:h-6 flex items-center justify-center cursor-pointer transition-transform
                     ${comment.resolved ? "bg-[#444444] text-gray-300" : "bg-accent text-background"}
                     ${activeCommentId === comment.id || hoveredBubbleId === comment.id ? "scale-125" : ""}
                   `}
-                  style={{
-                    clipPath: "polygon(0 0, 100% 0, 100% 100%, 25% 100%, 0 75%)",
-                  }}
+                  style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 25% 100%, 0 75%)" }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setActiveCommentId(comment.id);
@@ -287,10 +477,10 @@ export default function View() {
                   <span className="text-xs font-bold">{idx + 1}</span>
                 </div>
 
-                {/* Hover tooltip */}
+                {/* Hover tooltip — desktop only */}
                 {hoveredBubbleId === comment.id && (
                   <div
-                    className="absolute left-7 top-0 z-50 bg-background border border-border px-2 py-1 text-xs text-foreground whitespace-pre-wrap max-w-[220px] shadow-lg pointer-events-none"
+                    className="hidden md:block absolute left-7 top-0 z-50 bg-background border border-border px-2 py-1 text-xs text-foreground whitespace-pre-wrap max-w-[220px] shadow-lg pointer-events-none"
                     style={{ minWidth: "120px" }}
                   >
                     {comment.text}
@@ -299,201 +489,67 @@ export default function View() {
               </div>
             ))}
 
+            {/* New comment popup — desktop: anchored near click; mobile: fixed bottom */}
             {popup && (
-              <div
-                className="comment-popup absolute z-50 border border-border p-3 shadow-2xl flex flex-col gap-3 min-w-[240px]"
-                style={{
-                  left: `${popup.x}%`,
-                  top: `${popup.y}%`,
-                  backgroundColor: "#0a0a0a",
-                  borderRadius: "0px",
-                }}
-                onClick={(e) => e.stopPropagation()}
-                data-testid="popup-new-comment"
-              >
-                <textarea
-                  ref={inputRef}
-                  value={newCommentText}
-                  onChange={(e) => setNewCommentText(e.target.value)}
-                  className="w-full bg-background border border-border text-foreground p-2 min-h-[80px] resize-none outline-none focus:border-accent text-sm"
-                  placeholder="Leave a comment..."
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSaveComment();
-                    }
+              <>
+                {/* Desktop popup — hidden on mobile */}
+                <div
+                  className="comment-popup hidden md:flex absolute z-50 border border-border p-3 shadow-2xl flex-col gap-3 min-w-[240px]"
+                  style={{
+                    left: `${Math.min(Math.max(popup.x, 5), 70)}%`,
+                    top: `${Math.min(Math.max(popup.y, 5), 80)}%`,
+                    backgroundColor: "#0a0a0a",
                   }}
-                  data-testid="input-comment"
-                />
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => setPopup(null)}
-                    className="px-3 py-1 text-sm border border-border text-muted-foreground hover:border-accent hover:text-foreground interactive-element"
-                    data-testid="btn-cancel-comment"
-                  >
-                    CANCEL
-                  </button>
-                  <button
-                    onClick={handleSaveComment}
-                    className="px-3 py-1 text-sm border border-accent bg-accent text-background hover:opacity-90 interactive-element"
-                    data-testid="btn-save-comment"
-                  >
-                    SAVE
-                  </button>
+                  onClick={(e) => e.stopPropagation()}
+                  data-testid="popup-new-comment"
+                >
+                  <textarea
+                    ref={inputRef}
+                    value={newCommentText}
+                    onChange={(e) => setNewCommentText(e.target.value)}
+                    className="w-full bg-background border border-border text-foreground p-2 min-h-[80px] resize-none outline-none focus:border-accent text-sm"
+                    placeholder="Leave a comment..."
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSaveComment();
+                      }
+                    }}
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => setPopup(null)}
+                      className="px-3 py-1 text-sm border border-border text-muted-foreground hover:border-accent hover:text-foreground interactive-element"
+                      data-testid="btn-cancel-comment"
+                    >
+                      CANCEL
+                    </button>
+                    <button
+                      onClick={handleSaveComment}
+                      className="px-3 py-1 text-sm border border-accent bg-accent text-background hover:opacity-90 interactive-element"
+                      data-testid="btn-save-comment"
+                    >
+                      SAVE
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
         </main>
 
-        {/* Sidebar */}
-        <aside className="w-[320px] shrink-0 border-l border-border bg-background flex flex-col">
+        {/* ── Desktop sidebar ─────────────────────────────────────────────── */}
+        <aside className="hidden md:flex w-[320px] shrink-0 border-l border-border bg-background flex-col">
           <div className="p-4 border-b border-border flex items-center justify-between shrink-0">
             <h2 className="tracking-widest uppercase text-sm font-bold">COMMENTS</h2>
             <span className="text-muted-foreground text-sm">{comments.length}</span>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {comments.map((comment, idx) => {
-              const isHovered = hoveredBubbleId === comment.id;
-              const isActive = activeCommentId === comment.id;
-              return (
-                <div
-                  key={comment.id}
-                  ref={setCardRef(comment.id)}
-                  className={`p-3 border-l-2 cursor-pointer interactive-element border border-border relative group transition-colors ${
-                    comment.resolved
-                      ? "opacity-60 border-l-[#444444] bg-card"
-                      : "border-l-accent bg-card"
-                  } ${isActive ? "ring-1 ring-border" : ""} ${
-                    isHovered ? "bg-accent/10 border-accent" : ""
-                  }`}
-                  onClick={() => setActiveCommentId(comment.id)}
-                  data-testid={`card-${comment.id}`}
-                >
-                  {editingCommentId === comment.id ? (
-                    /* Edit mode */
-                    <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span
-                          className={`w-5 h-5 shrink-0 flex items-center justify-center text-xs ${
-                            comment.resolved ? "bg-[#444444] text-gray-300" : "bg-accent text-background"
-                          }`}
-                          style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 25% 100%, 0 75%)" }}
-                        >
-                          {idx + 1}
-                        </span>
-                        <span className="text-xs text-muted-foreground uppercase tracking-wider">Editing</span>
-                      </div>
-                      <textarea
-                        ref={editRef}
-                        value={editText}
-                        onChange={(e) => setEditText(e.target.value)}
-                        className="w-full bg-background border border-border text-foreground p-2 min-h-[64px] resize-none outline-none focus:border-accent text-sm"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            saveEdit(comment.id);
-                          } else if (e.key === "Escape") {
-                            e.stopPropagation();
-                            setEditingCommentId(null);
-                            setEditText("");
-                          }
-                        }}
-                        data-testid={`input-edit-comment-${comment.id}`}
-                      />
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={(e) => handleCancelEdit(e)}
-                          className="px-2 py-1 text-xs border border-border text-muted-foreground hover:border-accent interactive-element"
-                          data-testid={`btn-cancel-edit-${comment.id}`}
-                        >
-                          CANCEL
-                        </button>
-                        <button
-                          onClick={(e) => handleSaveEdit(comment.id, e)}
-                          className="px-2 py-1 text-xs border border-accent bg-accent text-background hover:opacity-90 interactive-element"
-                          data-testid={`btn-save-edit-${comment.id}`}
-                        >
-                          SAVE
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    /* Read mode */
-                    <>
-                      <div className="flex items-start gap-2 mb-2 pr-16">
-                        <span
-                          className={`w-5 h-5 shrink-0 flex items-center justify-center text-xs ${
-                            comment.resolved ? "bg-[#444444] text-gray-300" : "bg-accent text-background"
-                          }`}
-                          style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 25% 100%, 0 75%)" }}
-                        >
-                          {idx + 1}
-                        </span>
-                        <div className="flex flex-col gap-1 min-w-0">
-                          <span className="text-[10px] uppercase tracking-widest text-muted-foreground truncate">
-                            {comment.authorEmail ?? "anonymous"}
-                          </span>
-                          <p
-                            className={`text-sm ${
-                              comment.resolved ? "line-through text-muted-foreground" : "text-foreground"
-                            }`}
-                            onDoubleClick={(e) => startEdit(comment.id, comment.text, e)}
-                            title="Double-click to edit"
-                          >
-                            {comment.text}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Action buttons — visible on hover */}
-                      <div className="absolute top-2 right-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={(e) => startEdit(comment.id, comment.text, e)}
-                          className="text-muted-foreground hover:text-accent interactive-element text-xs"
-                          title="Edit comment"
-                          data-testid={`btn-edit-comment-${comment.id}`}
-                        >
-                          ✎
-                        </button>
-                        <button
-                          onClick={(e) => handleDeleteComment(comment.id, e)}
-                          className="text-muted-foreground hover:text-red-500 interactive-element text-xs"
-                          title="Delete comment"
-                          data-testid={`btn-delete-comment-${comment.id}`}
-                        >
-                          ✕
-                        </button>
-                      </div>
-
-                      <div className="flex justify-end mt-3">
-                        <button
-                          onClick={(e) => handleToggleResolve(comment.id, e)}
-                          className="text-[10px] uppercase tracking-wider text-muted-foreground border border-border px-2 py-1 interactive-element hover:border-accent hover:text-accent"
-                          data-testid={`btn-resolve-${comment.id}`}
-                        >
-                          {comment.resolved ? "REOPEN" : "RESOLVE"}
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              );
-            })}
-
-            {comments.length === 0 && (
-              <div className="flex flex-col items-center gap-3 py-12 text-center">
-                <p className="text-muted-foreground text-sm uppercase tracking-widest">
-                  No comments yet
-                </p>
-                <p className="text-muted-foreground text-xs leading-relaxed max-w-[200px]">
-                  Click{" "}
-                  <span className="text-accent font-bold">+ ADD COMMENT</span>{" "}
-                  in the toolbar, then click anywhere on the design to pin feedback
-                </p>
-              </div>
-            )}
+            {comments.map((comment, idx) => (
+              <CommentCard key={comment.id} comment={comment} idx={idx} />
+            ))}
+            {comments.length === 0 && <EmptyState />}
           </div>
 
           <div className="p-4 border-t border-border shrink-0">
@@ -506,7 +562,89 @@ export default function View() {
             </button>
           </div>
         </aside>
+
+        {/* ── Mobile comments panel ───────────────────────────────────────── */}
+        <div
+          className={`flex-1 flex-col bg-background overflow-hidden ${
+            mobileTab === "comments" ? "flex" : "hidden"
+          } md:hidden`}
+        >
+          <div className="flex-1 overflow-y-auto p-3 space-y-3">
+            {comments.map((comment, idx) => (
+              <CommentCard key={comment.id} comment={comment} idx={idx} />
+            ))}
+            {comments.length === 0 && <EmptyState />}
+          </div>
+          <div className="p-3 border-t border-border shrink-0">
+            <button
+              onClick={copyForClaude}
+              className="w-full py-3 border border-border text-sm uppercase tracking-wider interactive-element hover:border-accent hover:text-accent transition-colors bg-background"
+              data-testid="btn-copy-claude-mobile"
+            >
+              → COPY ALL FOR CLAUDE
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* ── Mobile new-comment bottom sheet ─────────────────────────────────── */}
+      {popup && (
+        <div className="md:hidden fixed inset-0 z-50 flex items-end" onClick={() => setPopup(null)}>
+          <div
+            className="comment-popup w-full border-t border-border p-4 flex flex-col gap-3"
+            style={{ backgroundColor: "#0a0a0a" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs uppercase tracking-widest text-muted-foreground">
+                New comment
+              </span>
+              <button
+                onClick={() => setPopup(null)}
+                className="text-muted-foreground text-lg leading-none interactive-element"
+              >
+                ✕
+              </button>
+            </div>
+            <textarea
+              ref={inputRef}
+              value={newCommentText}
+              onChange={(e) => setNewCommentText(e.target.value)}
+              className="w-full bg-background border border-border text-foreground p-2 min-h-[90px] resize-none outline-none focus:border-accent text-sm"
+              placeholder="Leave a comment..."
+              data-testid="input-comment"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPopup(null)}
+                className="flex-1 py-2 text-sm border border-border text-muted-foreground interactive-element"
+                data-testid="btn-cancel-comment"
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={handleSaveComment}
+                className="flex-1 py-2 text-sm border border-accent bg-accent text-background interactive-element"
+                data-testid="btn-save-comment"
+              >
+                SAVE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="flex flex-col items-center gap-3 py-12 text-center">
+      <p className="text-muted-foreground text-sm uppercase tracking-widest">No comments yet</p>
+      <p className="text-muted-foreground text-xs leading-relaxed max-w-[200px]">
+        Click <span className="text-accent font-bold">+ ADD COMMENT</span> in the toolbar, then
+        tap anywhere on the design to pin feedback
+      </p>
     </div>
   );
 }
