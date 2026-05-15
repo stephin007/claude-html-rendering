@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, projectsTable, prototypesTable, commentsTable } from "@workspace/db";
+import { db, projectsTable, prototypesTable, commentsTable, usersTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import {
   CreateProjectBody,
@@ -236,6 +236,7 @@ router.get("/prototypes/:id/comments", async (req, res) => {
       y: c.y,
       text: c.text,
       resolved: c.resolved,
+      authorEmail: c.authorEmail ?? null,
       createdAt: c.createdAt.toISOString(),
     }))
   );
@@ -253,9 +254,22 @@ router.post("/prototypes/:id/comments", async (req, res) => {
     return;
   }
   const { x, y, text } = bodyParsed.data;
+
+  // Resolve author email from session if logged in
+  let authorEmail: string | null = null;
+  const userId = req.session?.userId as string | undefined;
+  if (userId) {
+    const [user] = await db
+      .select({ email: usersTable.email })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
+    authorEmail = user?.email ?? null;
+  }
+
   const [comment] = await db
     .insert(commentsTable)
-    .values({ prototypeId: paramsParsed.data.id, x, y, text })
+    .values({ prototypeId: paramsParsed.data.id, x, y, text, authorEmail })
     .returning();
   res.status(201).json({
     id: comment.id,
@@ -264,6 +278,7 @@ router.post("/prototypes/:id/comments", async (req, res) => {
     y: comment.y,
     text: comment.text,
     resolved: comment.resolved,
+    authorEmail: comment.authorEmail ?? null,
     createdAt: comment.createdAt.toISOString(),
   });
 });
@@ -295,6 +310,7 @@ router.patch("/comments/:id/resolve", requireAuth, async (req, res) => {
     y: comment.y,
     text: comment.text,
     resolved: comment.resolved,
+    authorEmail: comment.authorEmail ?? null,
     createdAt: comment.createdAt.toISOString(),
   });
 });
@@ -331,6 +347,7 @@ router.patch("/comments/:id", requireAuth, async (req, res) => {
     y: comment.y,
     text: comment.text,
     resolved: comment.resolved,
+    authorEmail: comment.authorEmail ?? null,
     createdAt: comment.createdAt.toISOString(),
   });
 });

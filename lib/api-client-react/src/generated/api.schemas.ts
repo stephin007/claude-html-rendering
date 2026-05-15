@@ -77,6 +77,7 @@ export interface Comment {
   y: number;
   text: string;
   resolved: boolean;
+  authorEmail?: string | null;
   createdAt: string;
 }
 

@@ -425,5 +425,8 @@ components:
           type: string
         resolved:
           type: boolean
+        authorEmail:
+          type: string
+          nullable: true
         createdAt:
           type: string

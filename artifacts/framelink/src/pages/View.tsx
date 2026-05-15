@@ -427,15 +427,20 @@ export default function View() {
                         >
                           {idx + 1}
                         </span>
-                        <p
-                          className={`text-sm ${
-                            comment.resolved ? "line-through text-muted-foreground" : "text-foreground"
-                          }`}
-                          onDoubleClick={(e) => startEdit(comment.id, comment.text, e)}
-                          title="Double-click to edit"
-                        >
-                          {comment.text}
-                        </p>
+                        <div className="flex flex-col gap-1 min-w-0">
+                          <span className="text-[10px] uppercase tracking-widest text-muted-foreground truncate">
+                            {comment.authorEmail ?? "anonymous"}
+                          </span>
+                          <p
+                            className={`text-sm ${
+                              comment.resolved ? "line-through text-muted-foreground" : "text-foreground"
+                            }`}
+                            onDoubleClick={(e) => startEdit(comment.id, comment.text, e)}
+                            title="Double-click to edit"
+                          >
+                            {comment.text}
+                          </p>
+                        </div>
                       </div>
 
                       {/* Action buttons — visible on hover */}
