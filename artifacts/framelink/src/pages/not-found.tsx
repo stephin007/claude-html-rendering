@@ -1,7 +1,9 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
+import { useTitle } from "@/hooks/useTitle";
 
 export default function NotFound() {
+  useTitle("404 Not Found");
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md mx-4">

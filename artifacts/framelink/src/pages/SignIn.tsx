@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuthContext } from "@/context/AuthContext";
+import { useTitle } from "@/hooks/useTitle";
 
 export default function SignIn() {
+  useTitle("Sign in");
   const [, setLocation] = useLocation();
   const { refetch } = useAuthContext();
   const [email, setEmail] = useState("");
