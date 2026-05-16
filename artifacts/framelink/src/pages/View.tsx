@@ -448,10 +448,15 @@ export default function View() {
       <div className="flex-1 flex overflow-hidden">
         {/* ── Design / Prototype pane ─────────────────────────────────────── */}
         <main
-          className={`relative bg-white ${
+          className={`bg-white ${
             mobileTab === "design" ? "flex-1" : "hidden"
-          } md:flex md:flex-1`}
+          } md:flex md:flex-1 overflow-auto md:overflow-hidden`}
+          style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
         >
+          {/* Inner container: 1024 px wide on mobile so the prototype renders
+              at desktop scale and the user can scroll/pinch-zoom around it.
+              On desktop (md:) it reverts to full flex layout. */}
+          <div className="relative h-full min-w-[1024px] md:min-w-0 md:flex-1">
           <iframe
             src={blobUrl}
             className="w-full h-full border-none"
@@ -558,6 +563,7 @@ export default function View() {
               </>
             )}
           </div>
+          </div>{/* end inner scroll container */}
         </main>
 
         {/* ── Desktop sidebar ─────────────────────────────────────────────── */}
