@@ -18,18 +18,34 @@ export default function ProjectDetail() {
   const [file, setFile] = useState<File | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // IDs of prototypes uploaded in this session that haven't received a thumbnail yet
+  const [pendingThumbnailIds, setPendingThumbnailIds] = useState<Set<string>>(new Set());
   
   const { data: project, refetch } = useGetProject(id as string, {
     query: { enabled: !!id, queryKey: getGetProjectQueryKey(id as string) },
   });
 
-  // Poll every 3 s while any prototype is still missing its thumbnail (async generation)
+  // Remove IDs from pending set once their thumbnail resolves
   useEffect(() => {
-    const hasPending = project?.prototypes?.some((p) => p.thumbnail === null);
-    if (!hasPending) return;
+    if (!project?.prototypes || pendingThumbnailIds.size === 0) return;
+    const resolved = project.prototypes
+      .filter((p) => pendingThumbnailIds.has(p.id) && p.thumbnail != null)
+      .map((p) => p.id);
+    if (resolved.length === 0) return;
+    setPendingThumbnailIds((prev) => {
+      const next = new Set(prev);
+      resolved.forEach((rid) => next.delete(rid));
+      return next;
+    });
+  }, [project, pendingThumbnailIds]);
+
+  // Poll only while we have locally-tracked pending uploads
+  useEffect(() => {
+    if (pendingThumbnailIds.size === 0) return;
     const timer = setInterval(() => { void refetch(); }, 3000);
     return () => clearInterval(timer);
-  }, [project, refetch]);
+  }, [pendingThumbnailIds.size, refetch]);
 
   useTitle(project?.name ?? null);
 
@@ -43,8 +59,10 @@ export default function ProjectDetail() {
     createPrototype.mutate(
       { data: { htmlContent: text, fileName: file.name, projectId: id } },
       {
-        onSuccess: () => {
+        onSuccess: (data) => {
           setFile(null);
+          // Track this new prototype as pending a thumbnail
+          setPendingThumbnailIds((prev) => new Set([...prev, data.id]));
           queryClient.invalidateQueries({ queryKey: getGetProjectQueryKey(id) });
         },
       }
@@ -154,7 +172,7 @@ export default function ProjectDetail() {
                 {project.prototypes.map((p) => (
                   <div
                     key={p.id}
-                    className="flex flex-col bg-background border-accent/0 hover:border-l-accent group"
+                    className="flex flex-col bg-background group"
                     data-testid={`row-prototype-${p.id}`}
                   >
                     {/* Thumbnail */}
@@ -168,7 +186,7 @@ export default function ProjectDetail() {
                       ) : (
                         <div className="w-full h-36 border-b border-border bg-card flex items-center justify-center">
                           <span className="text-xs text-muted-foreground uppercase tracking-widest text-center px-4">
-                            {p.thumbnail === null ? "// GENERATING..." : p.fileName}
+                            {pendingThumbnailIds.has(p.id) ? "// GENERATING..." : p.fileName}
                           </span>
                         </div>
                       )}
