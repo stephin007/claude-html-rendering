@@ -231,7 +231,7 @@ export default function Home() {
                           </Link>
                           <button
                             onClick={(e) => startEditing(p.id, p.name, e)}
-                            className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-accent interactive-element p-0.5 text-xs"
+                            className="shrink-0 opacity-0 group-hover:opacity-100 pointer-coarse:opacity-40 transition-opacity text-muted-foreground hover:text-accent interactive-element p-0.5 text-xs"
                             title="Rename"
                             data-testid={`btn-rename-icon-project-${p.id}`}
                           >
