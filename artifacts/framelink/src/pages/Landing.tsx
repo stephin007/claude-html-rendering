@@ -1,6 +1,8 @@
 import { Link } from "wouter";
+import { useTitle } from "@/hooks/useTitle";
 
 export default function Landing() {
+  useTitle(null);
   return (
     <div className="min-h-screen w-full flex flex-col items-center bg-background text-foreground p-8 font-mono">
       <div className="w-full max-w-5xl flex flex-col h-full grow">

@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { useLocation } from "wouter";
+import { useTitle } from "@/hooks/useTitle";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListProjects,
@@ -11,6 +12,7 @@ import {
 import { useAuthContext } from "@/context/AuthContext";
 
 export default function Home() {
+  useTitle(null);
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { user, signOut } = useAuthContext();

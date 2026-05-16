@@ -7,6 +7,7 @@ import {
   useDeletePrototype,
   getGetProjectQueryKey
 } from "@workspace/api-client-react";
+import { useTitle } from "@/hooks/useTitle";
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +22,8 @@ export default function ProjectDetail() {
   const { data: project } = useGetProject(id as string, {
     query: { enabled: !!id, queryKey: getGetProjectQueryKey(id as string) },
   });
+
+  useTitle(project?.name ?? null);
 
   const createPrototype = useCreatePrototype();
   const deletePrototype = useDeletePrototype();

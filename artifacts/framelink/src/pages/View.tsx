@@ -11,6 +11,7 @@ import {
   getGetPrototypeQueryKey,
   getGetCommentsQueryKey,
 } from "@workspace/api-client-react";
+import { useTitle } from "@/hooks/useTitle";
 
 export default function View() {
   const { id } = useParams<{ id: string }>();
@@ -47,6 +48,8 @@ export default function View() {
   const { data: prototype } = useGetPrototype(id, {
     query: { enabled: !!id, queryKey: getGetPrototypeQueryKey(id) },
   });
+
+  useTitle(prototype ? `${prototype.projectName} / ${prototype.fileName}` : null);
 
   const { data: comments = [] } = useGetComments(id, {
     query: {
