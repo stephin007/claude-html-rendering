@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useTitle } from "@/hooks/useTitle";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -221,14 +221,23 @@ export default function Home() {
                           autoFocus
                         />
                       ) : (
-                        <button
-                          onClick={(e) => startEditing(p.id, p.name, e)}
-                          className="font-bold text-accent truncate hover:underline underline-offset-2 text-left"
-                          title="Click to rename"
-                          data-testid={`btn-rename-project-${p.id}`}
-                        >
-                          {p.name}
-                        </button>
+                        <div className="flex items-center gap-1 min-w-0">
+                          <Link
+                            href={`/project/${p.id}`}
+                            className="font-bold text-accent truncate hover:underline underline-offset-2"
+                            data-testid={`btn-rename-project-${p.id}`}
+                          >
+                            {p.name}
+                          </Link>
+                          <button
+                            onClick={(e) => startEditing(p.id, p.name, e)}
+                            className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-accent interactive-element p-0.5 text-xs"
+                            title="Rename"
+                            data-testid={`btn-rename-icon-project-${p.id}`}
+                          >
+                            ✎
+                          </button>
+                        </div>
                       )}
                       <span className="text-muted-foreground truncate hidden sm:inline">|</span>
                       <span className="text-muted-foreground truncate">// {p.fileCount} FILES</span>

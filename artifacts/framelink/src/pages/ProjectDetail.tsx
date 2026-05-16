@@ -263,14 +263,23 @@ export default function ProjectDetail() {
                             autoFocus
                           />
                         ) : (
-                          <button
-                            onClick={(e) => startEditing(p.id, p.fileName, e)}
-                            className="font-bold text-accent truncate hover:underline underline-offset-2 text-sm text-left"
-                            title="Click to rename"
-                            data-testid={`btn-rename-prototype-${p.id}`}
-                          >
-                            {p.fileName}
-                          </button>
+                          <div className="flex items-center gap-1 min-w-0">
+                            <Link
+                              href={`/view/${p.id}`}
+                              className="font-bold text-accent truncate hover:underline underline-offset-2 text-sm"
+                              data-testid={`btn-rename-prototype-${p.id}`}
+                            >
+                              {p.fileName}
+                            </Link>
+                            <button
+                              onClick={(e) => startEditing(p.id, p.fileName, e)}
+                              className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-accent interactive-element p-0.5 text-xs"
+                              title="Rename"
+                              data-testid={`btn-rename-icon-prototype-${p.id}`}
+                            >
+                              ✎
+                            </button>
+                          </div>
                         )}
                         <span className="text-muted-foreground text-xs">{new Date(p.createdAt).toLocaleDateString()}</span>
                       </div>
