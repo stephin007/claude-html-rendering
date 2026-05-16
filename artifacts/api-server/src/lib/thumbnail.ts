@@ -1,5 +1,5 @@
 import { existsSync } from "fs";
-import puppeteer from "puppeteer-core";
+import { chromium } from "playwright-core";
 
 /**
  * Resolves a Chromium executable path by checking known candidate locations.
@@ -26,8 +26,8 @@ function resolveChromiumPath(): string | null {
  * Renders `htmlContent` in a headless Chromium browser and returns a base64
  * PNG data URL (data:image/png;base64,...).
  *
- * All external HTTP/HTTPS requests are blocked during rendering to prevent
- * server-side request forgery (SSRF) from attacker-controlled HTML content.
+ * All external HTTP/HTTPS and file:// requests are blocked during rendering to
+ * prevent SSRF and local file access from attacker-controlled HTML content.
  *
  * Returns null on any failure so prototype creation never breaks.
  */
@@ -35,9 +35,9 @@ export async function generateThumbnail(htmlContent: string): Promise<string | n
   const executablePath = resolveChromiumPath();
   if (!executablePath) return null;
 
-  let browser: Awaited<ReturnType<typeof puppeteer.launch>> | null = null;
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | null = null;
   try {
-    browser = await puppeteer.launch({
+    browser = await chromium.launch({
       executablePath,
       headless: true,
       args: [
@@ -45,34 +45,36 @@ export async function generateThumbnail(htmlContent: string): Promise<string | n
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--disable-gpu",
-        // Block network access at the process level as defense-in-depth
         "--disable-background-networking",
         "--disable-default-apps",
       ],
     });
 
     const page = await browser.newPage();
-    await page.setViewport({ width: 1200, height: 800 });
+    await page.setViewportSize({ width: 1200, height: 800 });
 
-    // Intercept all requests and block external HTTP/HTTPS to prevent SSRF
-    await page.setRequestInterception(true);
-    page.on("request", (req) => {
-      const url = req.url();
-      if (url.startsWith("http://") || url.startsWith("https://")) {
-        void req.abort();
+    // Block all external and file:// requests to prevent SSRF and local file access
+    await page.route("**/*", (route) => {
+      const url = route.request().url();
+      if (
+        url.startsWith("http://") ||
+        url.startsWith("https://") ||
+        url.startsWith("file://")
+      ) {
+        void route.abort();
       } else {
-        void req.continue();
+        void route.continue();
       }
     });
 
     await page.setContent(htmlContent, { waitUntil: "load", timeout: 10000 });
 
-    const screenshot = await page.screenshot({
+    const screenshotBuffer = await page.screenshot({
       type: "png",
       clip: { x: 0, y: 0, width: 1200, height: 800 },
     });
 
-    const base64 = Buffer.from(screenshot).toString("base64");
+    const base64 = Buffer.from(screenshotBuffer).toString("base64");
     return `data:image/png;base64,${base64}`;
   } catch {
     return null;
