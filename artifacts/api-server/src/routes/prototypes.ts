@@ -159,9 +159,11 @@ router.post("/prototypes", requireAuth, async (req, res) => {
           .update(prototypesTable)
           .set({ thumbnail })
           .where(eq(prototypesTable.id, prototypeId));
+      } else {
+        req.log.warn({ prototypeId }, "thumbnail generation returned null — no browser available or render failed");
       }
-    } catch {
-      // best-effort — silently swallow errors
+    } catch (err) {
+      req.log.warn({ prototypeId, err }, "thumbnail generation threw an error");
     }
   })();
 
@@ -183,6 +185,7 @@ router.get("/prototypes", async (req, res) => {
       fileName: prototypesTable.fileName,
       projectName: prototypesTable.projectName,
       projectId: prototypesTable.projectId,
+      thumbnail: prototypesTable.thumbnail,
       createdAt: prototypesTable.createdAt,
     })
     .from(prototypesTable)
@@ -194,6 +197,7 @@ router.get("/prototypes", async (req, res) => {
       fileName: p.fileName,
       projectName: p.projectName,
       projectId: p.projectId ?? "",
+      thumbnail: p.thumbnail ?? null,
       createdAt: p.createdAt.toISOString(),
     }))
   );
