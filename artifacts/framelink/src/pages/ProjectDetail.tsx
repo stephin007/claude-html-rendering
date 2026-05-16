@@ -19,23 +19,28 @@ export default function ProjectDetail() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // IDs of prototypes uploaded in this session that haven't received a thumbnail yet
-  const [pendingThumbnailIds, setPendingThumbnailIds] = useState<Set<string>>(new Set());
+  // Map of prototypeId → timestamp when it was added as pending.
+  // Entries are removed when the thumbnail resolves OR after THUMBNAIL_TIMEOUT_MS.
+  const [pendingThumbnailIds, setPendingThumbnailIds] = useState<Map<string, number>>(new Map());
+  const THUMBNAIL_TIMEOUT_MS = 30_000;
   
   const { data: project, refetch } = useGetProject(id as string, {
     query: { enabled: !!id, queryKey: getGetProjectQueryKey(id as string) },
   });
 
-  // Remove IDs from pending set once their thumbnail resolves
+  // Remove IDs from pending map once their thumbnail resolves OR they time out
   useEffect(() => {
     if (!project?.prototypes || pendingThumbnailIds.size === 0) return;
-    const resolved = project.prototypes
-      .filter((p) => pendingThumbnailIds.has(p.id) && p.thumbnail != null)
-      .map((p) => p.id);
-    if (resolved.length === 0) return;
+    const now = Date.now();
+    const toRemove = [...pendingThumbnailIds.keys()].filter((pid) => {
+      const proto = project.prototypes?.find((p) => p.id === pid);
+      const addedAt = pendingThumbnailIds.get(pid) ?? 0;
+      return (proto && proto.thumbnail != null) || (now - addedAt > THUMBNAIL_TIMEOUT_MS);
+    });
+    if (toRemove.length === 0) return;
     setPendingThumbnailIds((prev) => {
-      const next = new Set(prev);
-      resolved.forEach((rid) => next.delete(rid));
+      const next = new Map(prev);
+      toRemove.forEach((rid) => next.delete(rid));
       return next;
     });
   }, [project, pendingThumbnailIds]);
@@ -61,8 +66,8 @@ export default function ProjectDetail() {
       {
         onSuccess: (data) => {
           setFile(null);
-          // Track this new prototype as pending a thumbnail
-          setPendingThumbnailIds((prev) => new Set([...prev, data.id]));
+          // Track this new prototype as pending a thumbnail (with timestamp for timeout)
+          setPendingThumbnailIds((prev) => new Map([...prev, [data.id, Date.now()]]));
           queryClient.invalidateQueries({ queryKey: getGetProjectQueryKey(id) });
         },
       }
