@@ -105,11 +105,31 @@ export default function View() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [popup, commentMode]);
 
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [iframeHeight, setIframeHeight] = useState<number>(0);
+
   const blobUrl = useMemo(() => {
     if (!prototype?.htmlContent) return "";
     const blob = new Blob([prototype.htmlContent], { type: "text/html" });
     return URL.createObjectURL(blob);
   }, [prototype?.htmlContent]);
+
+  const handleIframeLoad = useCallback(() => {
+    try {
+      const doc = iframeRef.current?.contentWindow?.document;
+      if (doc) {
+        const h = Math.max(
+          doc.body.scrollHeight,
+          doc.documentElement.scrollHeight,
+          doc.body.offsetHeight,
+          doc.documentElement.offsetHeight
+        );
+        if (h > 0) setIframeHeight(h);
+      }
+    } catch {
+      // cross-origin guard — should never fire for blob URLs
+    }
+  }, []);
 
   if (!prototype) return <div className="p-8 font-mono">LOADING...</div>;
 
@@ -450,18 +470,22 @@ export default function View() {
         <main
           className={`bg-white ${
             mobileTab === "design" ? "flex-1" : "hidden"
-          } md:flex md:flex-1 overflow-auto md:overflow-hidden`}
+          } md:flex md:flex-1 overflow-auto`}
           style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
         >
           {/* Inner container: 1024 px wide on mobile so the prototype renders
-              at desktop scale and the user can scroll/pinch-zoom around it.
-              On desktop (md:) it reverts to full flex layout. */}
-          <div className="relative h-full min-w-[1024px] md:min-w-0 md:flex-1">
+              at desktop scale. On desktop (md:) takes full flex width.
+              Height is driven by the iframe content so comments anchor to
+              the full page, not just the visible viewport slice. */}
+          <div className="relative min-w-[1024px] md:min-w-0 md:flex-1">
           <iframe
+            ref={iframeRef}
             src={blobUrl}
-            className="w-full h-full border-none"
+            className="w-full border-none block"
+            style={{ height: iframeHeight > 0 ? `${iframeHeight}px` : "100vh" }}
             title="Prototype View"
             sandbox="allow-scripts allow-same-origin"
+            onLoad={handleIframeLoad}
           />
 
           {/* Comment overlay */}
@@ -519,6 +543,18 @@ export default function View() {
             {/* New comment popup — desktop: anchored near click; mobile: fixed bottom */}
             {popup && (
               <>
+                {/* Pin marker at exact click position */}
+                <div
+                  className="hidden md:block absolute pointer-events-none z-[60]"
+                  style={{
+                    left: `${popup.x}%`,
+                    top: `${popup.y}%`,
+                    transform: "translate(-50%, -50%)",
+                  }}
+                >
+                  <div className="w-3 h-3 bg-accent" style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 25% 100%, 0 75%)" }} />
+                </div>
+
                 {/* Desktop popup — hidden on mobile */}
                 <div
                   className="comment-popup hidden md:flex absolute z-50 border border-border p-3 shadow-2xl flex-col gap-3 min-w-[240px]"

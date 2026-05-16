@@ -33,7 +33,7 @@ HTML prototype review tool — upload an HTML file, get a shareable link, drop n
 
 ## Architecture decisions
 
-- Coordinates for comment bubbles stored as percentages (x/y as floats 0-1) so they render correctly at any screen size
+- Coordinates for comment bubbles stored as percentages (x/y as floats 0–100) relative to the full iframe content area; the iframe is expanded to its content height after load so comments anchor to the full prototype, not just the visible viewport slice
 - HTML content stored as text in PostgreSQL — no object storage needed for MVP
 - Comments polled every 3 seconds (refetchInterval) for real-time feel without websockets
 - Auth: email/password with bcrypt (cost 12), sessions stored in Postgres via connect-pg-simple, 30-day cookies

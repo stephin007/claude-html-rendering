@@ -147,6 +147,7 @@ export const UpdatePrototypeResponse = zod.object({
   "fileName": zod.string(),
   "projectName": zod.string(),
   "projectId": zod.string(),
+  "thumbnail": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
