@@ -86,6 +86,25 @@ export default function View() {
     }
   }, [hoveredBubbleId]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLElement && e.target.closest("textarea, input")) return;
+      if (e.key === "c" || e.key === "C") {
+        setCommentMode((prev) => !prev);
+        setPopup(null);
+      } else if (e.key === "Escape") {
+        if (popup !== null) {
+          setPopup(null);
+        } else if (commentMode) {
+          setCommentMode(false);
+        }
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [popup, commentMode]);
+
   const blobUrl = useMemo(() => {
     if (!prototype?.htmlContent) return "";
     const blob = new Blob([prototype.htmlContent], { type: "text/html" });
@@ -396,7 +415,7 @@ export default function View() {
           </button>
           {!commentMode && (
             <span className="text-[9px] md:text-[10px] text-muted-foreground uppercase tracking-widest">
-              tap to pin feedback
+              tap to pin feedback &nbsp;[C]
             </span>
           )}
         </div>
