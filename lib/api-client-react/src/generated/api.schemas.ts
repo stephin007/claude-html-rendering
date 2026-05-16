@@ -17,6 +17,10 @@ export interface ProjectInput {
   name: string;
 }
 
+export interface ProjectUpdateInput {
+  name: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -50,6 +54,10 @@ export interface PrototypeInput {
   htmlContent: string;
   fileName: string;
   projectId: string;
+}
+
+export interface PrototypeUpdateInput {
+  fileName: string;
 }
 
 export interface Prototype {

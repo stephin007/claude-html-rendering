@@ -82,6 +82,33 @@ paths:
                 $ref: "#/components/schemas/ProjectDetail"
         "404":
           description: Not found
+    patch:
+      operationId: updateProject
+      tags: [projects]
+      summary: Rename a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectUpdateInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
     delete:
       operationId: deleteProject
       tags: [projects]
@@ -152,6 +179,33 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Prototype"
+        "404":
+          description: Not found
+    patch:
+      operationId: updatePrototype
+      tags: [prototypes]
+      summary: Rename a prototype file
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrototypeUpdateInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prototype"
+        "403":
+          description: Forbidden
         "404":
           description: Not found
     delete:
@@ -309,6 +363,13 @@ components:
         name:
           type: string
 
+    ProjectUpdateInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+
     Project:
       type: object
       required: [id, name, createdAt]
@@ -357,6 +418,13 @@ components:
         fileName:
           type: string
         projectId:
+          type: string
+
+    PrototypeUpdateInput:
+      type: object
+      required: [fileName]
+      properties:
+        fileName:
           type: string
 
     Prototype:

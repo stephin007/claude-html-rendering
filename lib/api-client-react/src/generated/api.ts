@@ -29,9 +29,11 @@ import type {
   ProjectDetail,
   ProjectInput,
   ProjectMeta,
+  ProjectUpdateInput,
   Prototype,
   PrototypeInput,
-  PrototypeMeta
+  PrototypeMeta,
+  PrototypeUpdateInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -348,6 +350,78 @@ export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TE
 
 
 
+export const getUpdateProjectUrl = (id: string,) => {
+
+
+
+
+  return `/api/projects/${id}`
+}
+
+/**
+ * @summary Rename a project
+ */
+export const updateProject = async (id: string,
+    projectUpdateInput: ProjectUpdateInput, options?: RequestInit): Promise<Project> => {
+
+  return customFetch<Project>(getUpdateProjectUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      projectUpdateInput,)
+  }
+);}
+
+
+
+
+export const getUpdateProjectMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProject>>, TError,{id: string;data: BodyType<ProjectUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateProject>>, TError,{id: string;data: BodyType<ProjectUpdateInput>}, TContext> => {
+
+const mutationKey = ['updateProject'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProject>>, {id: string;data: BodyType<ProjectUpdateInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateProject(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateProjectMutationResult = NonNullable<Awaited<ReturnType<typeof updateProject>>>
+    export type UpdateProjectMutationBody = BodyType<ProjectUpdateInput>
+    export type UpdateProjectMutationError = ErrorType<void>
+
+    /**
+ * @summary Rename a project
+ */
+export const useUpdateProject = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProject>>, TError,{id: string;data: BodyType<ProjectUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateProject>>,
+        TError,
+        {id: string;data: BodyType<ProjectUpdateInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateProjectMutationOptions(options));
+    }
+
 export const getDeleteProjectUrl = (id: string,) => {
 
 
@@ -642,6 +716,78 @@ export function useGetPrototype<TData = Awaited<ReturnType<typeof getPrototype>>
 
 
 
+
+export const getUpdatePrototypeUrl = (id: string,) => {
+
+
+
+
+  return `/api/prototypes/${id}`
+}
+
+/**
+ * @summary Rename a prototype file
+ */
+export const updatePrototype = async (id: string,
+    prototypeUpdateInput: PrototypeUpdateInput, options?: RequestInit): Promise<Prototype> => {
+
+  return customFetch<Prototype>(getUpdatePrototypeUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      prototypeUpdateInput,)
+  }
+);}
+
+
+
+
+export const getUpdatePrototypeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePrototype>>, TError,{id: string;data: BodyType<PrototypeUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePrototype>>, TError,{id: string;data: BodyType<PrototypeUpdateInput>}, TContext> => {
+
+const mutationKey = ['updatePrototype'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePrototype>>, {id: string;data: BodyType<PrototypeUpdateInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updatePrototype(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePrototypeMutationResult = NonNullable<Awaited<ReturnType<typeof updatePrototype>>>
+    export type UpdatePrototypeMutationBody = BodyType<PrototypeUpdateInput>
+    export type UpdatePrototypeMutationError = ErrorType<void>
+
+    /**
+ * @summary Rename a prototype file
+ */
+export const useUpdatePrototype = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePrototype>>, TError,{id: string;data: BodyType<PrototypeUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePrototype>>,
+        TError,
+        {id: string;data: BodyType<PrototypeUpdateInput>},
+        TContext
+      > => {
+      return useMutation(getUpdatePrototypeMutationOptions(options));
+    }
 
 export const getDeletePrototypeUrl = (id: string,) => {
 

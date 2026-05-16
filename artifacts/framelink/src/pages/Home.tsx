@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { useTitle } from "@/hooks/useTitle";
 import { useQueryClient } from "@tanstack/react-query";
@@ -7,6 +7,7 @@ import {
   useCreateProject,
   useCreatePrototype,
   useDeleteProject,
+  useUpdateProject,
   getListProjectsQueryKey
 } from "@workspace/api-client-react";
 import { useAuthContext } from "@/context/AuthContext";
@@ -20,10 +21,14 @@ export default function Home() {
   const [projectName, setProjectName] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const editInputRef = useRef<HTMLInputElement>(null);
+
   const createProject = useCreateProject();
   const createPrototype = useCreatePrototype();
   const deleteProject = useDeleteProject();
+  const updateProject = useUpdateProject();
   const { data: projects } = useListProjects();
 
   const handleUpload = async () => {
@@ -77,6 +82,40 @@ export default function Home() {
         }
       }
     );
+  };
+
+  const startEditing = (id: string, currentName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingId(id);
+    setEditingName(currentName);
+    setTimeout(() => editInputRef.current?.select(), 0);
+  };
+
+  const commitRename = (id: string) => {
+    const trimmed = editingName.trim();
+    if (!trimmed || trimmed === projects?.find((p) => p.id === id)?.name) {
+      setEditingId(null);
+      return;
+    }
+    queryClient.setQueryData(getListProjectsQueryKey(), (old: typeof projects) =>
+      old?.map((p) => (p.id === id ? { ...p, name: trimmed } : p))
+    );
+    setEditingId(null);
+    updateProject.mutate(
+      { id, data: { name: trimmed } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
+        },
+        onError: () => {
+          queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
+        },
+      }
+    );
+  };
+
+  const cancelRename = () => {
+    setEditingId(null);
   };
 
   const isUploading = createProject.isPending || createPrototype.isPending;
@@ -166,7 +205,31 @@ export default function Home() {
                     data-testid={`row-project-${p.id}`}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 flex-grow min-w-0 mr-4">
-                      <span className="font-bold text-accent truncate">{p.name}</span>
+                      {editingId === p.id ? (
+                        <input
+                          ref={editInputRef}
+                          type="text"
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          onBlur={() => commitRename(p.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") commitRename(p.id);
+                            if (e.key === "Escape") cancelRename();
+                          }}
+                          className="font-bold text-accent bg-transparent border-b-2 border-accent outline-none min-w-0 w-full max-w-xs"
+                          data-testid={`input-rename-project-${p.id}`}
+                          autoFocus
+                        />
+                      ) : (
+                        <button
+                          onClick={(e) => startEditing(p.id, p.name, e)}
+                          className="font-bold text-accent truncate hover:underline underline-offset-2 text-left"
+                          title="Click to rename"
+                          data-testid={`btn-rename-project-${p.id}`}
+                        >
+                          {p.name}
+                        </button>
+                      )}
                       <span className="text-muted-foreground truncate hidden sm:inline">|</span>
                       <span className="text-muted-foreground truncate">// {p.fileCount} FILES</span>
                       <span className="text-muted-foreground truncate hidden sm:inline">|</span>

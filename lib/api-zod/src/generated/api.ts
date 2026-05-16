@@ -59,6 +59,24 @@ export const GetProjectResponse = zod.object({
 
 
 /**
+ * @summary Rename a project
+ */
+export const UpdateProjectParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateProjectBody = zod.object({
+  "name": zod.string()
+})
+
+export const UpdateProjectResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "createdAt": zod.string()
+})
+
+
+/**
  * @summary Delete a project and all its files
  */
 export const DeleteProjectParams = zod.object({
@@ -108,6 +126,27 @@ export const GetPrototypeResponse = zod.object({
   "projectName": zod.string(),
   "projectId": zod.string(),
   "thumbnail": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Rename a prototype file
+ */
+export const UpdatePrototypeParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdatePrototypeBody = zod.object({
+  "fileName": zod.string()
+})
+
+export const UpdatePrototypeResponse = zod.object({
+  "id": zod.string(),
+  "htmlContent": zod.string(),
+  "fileName": zod.string(),
+  "projectName": zod.string(),
+  "projectId": zod.string(),
   "createdAt": zod.string()
 })
 

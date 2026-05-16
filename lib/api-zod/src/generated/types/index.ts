@@ -15,6 +15,8 @@ export * from './project';
 export * from './projectDetail';
 export * from './projectInput';
 export * from './projectMeta';
+export * from './projectUpdateInput';
 export * from './prototype';
 export * from './prototypeInput';
 export * from './prototypeMeta';
+export * from './prototypeUpdateInput';

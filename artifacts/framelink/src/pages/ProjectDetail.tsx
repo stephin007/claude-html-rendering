@@ -1,10 +1,11 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useParams, useLocation, Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetProject,
   useCreatePrototype,
   useDeletePrototype,
+  useUpdatePrototype,
   getGetProjectQueryKey
 } from "@workspace/api-client-react";
 import { useTitle } from "@/hooks/useTitle";
@@ -18,6 +19,9 @@ export default function ProjectDetail() {
   const [file, setFile] = useState<File | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   // Map of prototypeId → timestamp when it was added as pending.
   // Entries are removed when the thumbnail resolves OR after THUMBNAIL_TIMEOUT_MS.
@@ -56,6 +60,7 @@ export default function ProjectDetail() {
 
   const createPrototype = useCreatePrototype();
   const deletePrototype = useDeletePrototype();
+  const updatePrototype = useUpdatePrototype();
 
   const handleUpload = async () => {
     if (!file || !id) return;
@@ -112,6 +117,48 @@ export default function ProjectDetail() {
     navigator.clipboard.writeText(url);
     setCopiedId(prototypeId);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const startEditing = (protoId: string, currentName: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingId(protoId);
+    setEditingName(currentName);
+    setTimeout(() => editInputRef.current?.select(), 0);
+  };
+
+  const commitRename = (protoId: string) => {
+    const trimmed = editingName.trim();
+    const currentName = project?.prototypes?.find((p) => p.id === protoId)?.fileName;
+    if (!trimmed || trimmed === currentName) {
+      setEditingId(null);
+      return;
+    }
+    queryClient.setQueryData(getGetProjectQueryKey(id as string), (old: typeof project) => {
+      if (!old) return old;
+      return {
+        ...old,
+        prototypes: old.prototypes.map((p) =>
+          p.id === protoId ? { ...p, fileName: trimmed } : p
+        ),
+      };
+    });
+    setEditingId(null);
+    updatePrototype.mutate(
+      { id: protoId, data: { fileName: trimmed } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetProjectQueryKey(id as string) });
+        },
+        onError: () => {
+          queryClient.invalidateQueries({ queryKey: getGetProjectQueryKey(id as string) });
+        },
+      }
+    );
+  };
+
+  const cancelRename = () => {
+    setEditingId(null);
   };
 
   if (!project) return <div className="p-8 font-mono">LOADING...</div>;
@@ -200,12 +247,31 @@ export default function ProjectDetail() {
                     {/* Info + actions */}
                     <div className="flex flex-col gap-3 p-3 flex-1">
                       <div className="flex flex-col gap-1 min-w-0">
-                        <Link
-                          href={`/view/${p.id}`}
-                          className="font-bold text-accent truncate hover:underline underline-offset-2 text-sm interactive-element"
-                        >
-                          {p.fileName}
-                        </Link>
+                        {editingId === p.id ? (
+                          <input
+                            ref={editInputRef}
+                            type="text"
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            onBlur={() => commitRename(p.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") commitRename(p.id);
+                              if (e.key === "Escape") cancelRename();
+                            }}
+                            className="font-bold text-accent bg-transparent border-b-2 border-accent outline-none min-w-0 w-full text-sm"
+                            data-testid={`input-rename-prototype-${p.id}`}
+                            autoFocus
+                          />
+                        ) : (
+                          <button
+                            onClick={(e) => startEditing(p.id, p.fileName, e)}
+                            className="font-bold text-accent truncate hover:underline underline-offset-2 text-sm text-left"
+                            title="Click to rename"
+                            data-testid={`btn-rename-prototype-${p.id}`}
+                          >
+                            {p.fileName}
+                          </button>
+                        )}
                         <span className="text-muted-foreground text-xs">{new Date(p.createdAt).toLocaleDateString()}</span>
                       </div>
 

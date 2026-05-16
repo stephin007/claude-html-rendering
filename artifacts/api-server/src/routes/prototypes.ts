@@ -5,9 +5,13 @@ import { generateThumbnail } from "../lib/thumbnail";
 import {
   CreateProjectBody,
   GetProjectParams,
+  UpdateProjectParams,
+  UpdateProjectBody,
   DeleteProjectParams,
   CreatePrototypeBody,
   GetPrototypeParams,
+  UpdatePrototypeParams,
+  UpdatePrototypeBody,
   DeletePrototypeParams,
   GetCommentsParams,
   CreateCommentParams,
@@ -105,6 +109,48 @@ router.get("/projects/:id", requireAuth, async (req, res) => {
       thumbnail: f.thumbnail ?? null,
       createdAt: f.createdAt.toISOString(),
     })),
+  });
+});
+
+router.patch("/projects/:id", requireAuth, async (req, res) => {
+  const paramsParsed = UpdateProjectParams.safeParse(req.params);
+  if (!paramsParsed.success) {
+    res.status(400).json({ error: "Invalid params" });
+    return;
+  }
+  const bodyParsed = UpdateProjectBody.safeParse(req.body);
+  if (!bodyParsed.success) {
+    res.status(400).json({ error: "Invalid request body" });
+    return;
+  }
+  const ownerId = req.session.userId as string;
+  const [existing] = await db
+    .select()
+    .from(projectsTable)
+    .where(eq(projectsTable.id, paramsParsed.data.id))
+    .limit(1);
+  if (!existing) {
+    res.status(404).json({ error: "Project not found" });
+    return;
+  }
+  if (existing.ownerId !== ownerId) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  const newName = bodyParsed.data.name;
+  const [updated] = await db
+    .update(projectsTable)
+    .set({ name: newName })
+    .where(eq(projectsTable.id, paramsParsed.data.id))
+    .returning();
+  await db
+    .update(prototypesTable)
+    .set({ projectName: newName })
+    .where(eq(prototypesTable.projectId, paramsParsed.data.id));
+  res.json({
+    id: updated.id,
+    name: updated.name,
+    createdAt: updated.createdAt.toISOString(),
   });
 });
 
@@ -226,6 +272,51 @@ router.get("/prototypes/:id", async (req, res) => {
     projectId: prototype.projectId ?? "",
     thumbnail: prototype.thumbnail ?? null,
     createdAt: prototype.createdAt.toISOString(),
+  });
+});
+
+router.patch("/prototypes/:id", requireAuth, async (req, res) => {
+  const paramsParsed = UpdatePrototypeParams.safeParse(req.params);
+  if (!paramsParsed.success) {
+    res.status(400).json({ error: "Invalid params" });
+    return;
+  }
+  const bodyParsed = UpdatePrototypeBody.safeParse(req.body);
+  if (!bodyParsed.success) {
+    res.status(400).json({ error: "Invalid request body" });
+    return;
+  }
+  const ownerId = req.session.userId as string;
+  const [existing] = await db
+    .select()
+    .from(prototypesTable)
+    .where(eq(prototypesTable.id, paramsParsed.data.id))
+    .limit(1);
+  if (!existing) {
+    res.status(404).json({ error: "Prototype not found" });
+    return;
+  }
+  const [project] = await db
+    .select()
+    .from(projectsTable)
+    .where(eq(projectsTable.id, existing.projectId ?? ""))
+    .limit(1);
+  if (!project || project.ownerId !== ownerId) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  const [updated] = await db
+    .update(prototypesTable)
+    .set({ fileName: bodyParsed.data.fileName })
+    .where(eq(prototypesTable.id, paramsParsed.data.id))
+    .returning();
+  res.json({
+    id: updated.id,
+    htmlContent: updated.htmlContent,
+    fileName: updated.fileName,
+    projectName: updated.projectName,
+    projectId: updated.projectId ?? "",
+    createdAt: updated.createdAt.toISOString(),
   });
 });
 
