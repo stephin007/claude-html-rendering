@@ -12,5 +12,6 @@ export interface Prototype {
   fileName: string;
   projectName: string;
   projectId: string;
+  thumbnail?: string | null;
   createdAt: string;
 }

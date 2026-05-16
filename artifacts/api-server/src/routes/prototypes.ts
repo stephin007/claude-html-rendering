@@ -220,6 +220,7 @@ router.get("/prototypes/:id", async (req, res) => {
     fileName: prototype.fileName,
     projectName: prototype.projectName,
     projectId: prototype.projectId ?? "",
+    thumbnail: prototype.thumbnail ?? null,
     createdAt: prototype.createdAt.toISOString(),
   });
 });
