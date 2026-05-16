@@ -388,6 +388,9 @@ components:
           type: string
         projectId:
           type: string
+        thumbnail:
+          type: string
+          nullable: true
         createdAt:
           type: string
 

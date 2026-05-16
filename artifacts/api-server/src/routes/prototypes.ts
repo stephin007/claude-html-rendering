@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, projectsTable, prototypesTable, commentsTable, usersTable } from "@workspace/db";
 import { and, eq, sql } from "drizzle-orm";
+import { generateThumbnail } from "../lib/thumbnail";
 import {
   CreateProjectBody,
   GetProjectParams,
@@ -86,6 +87,7 @@ router.get("/projects/:id", requireAuth, async (req, res) => {
       fileName: prototypesTable.fileName,
       projectName: prototypesTable.projectName,
       projectId: prototypesTable.projectId,
+      thumbnail: prototypesTable.thumbnail,
       createdAt: prototypesTable.createdAt,
     })
     .from(prototypesTable)
@@ -100,6 +102,7 @@ router.get("/projects/:id", requireAuth, async (req, res) => {
       fileName: f.fileName,
       projectName: f.projectName,
       projectId: f.projectId ?? "",
+      thumbnail: f.thumbnail ?? null,
       createdAt: f.createdAt.toISOString(),
     })),
   });
@@ -145,12 +148,30 @@ router.post("/prototypes", requireAuth, async (req, res) => {
     .insert(prototypesTable)
     .values({ htmlContent, fileName, projectId, projectName })
     .returning();
+
+  // Fire-and-forget thumbnail generation — does not block the response
+  const prototypeId = prototype.id;
+  void (async () => {
+    try {
+      const thumbnail = await generateThumbnail(htmlContent);
+      if (thumbnail) {
+        await db
+          .update(prototypesTable)
+          .set({ thumbnail })
+          .where(eq(prototypesTable.id, prototypeId));
+      }
+    } catch {
+      // best-effort — silently swallow errors
+    }
+  })();
+
   res.status(201).json({
     id: prototype.id,
     htmlContent: prototype.htmlContent,
     fileName: prototype.fileName,
     projectName: prototype.projectName,
     projectId: prototype.projectId ?? "",
+    thumbnail: prototype.thumbnail ?? null,
     createdAt: prototype.createdAt.toISOString(),
   });
 });

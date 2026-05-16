@@ -35,6 +35,7 @@ export const prototypesTable = pgTable("prototypes", {
   htmlContent: text("html_content").notNull(),
   fileName: text("file_name").notNull(),
   projectName: text("project_name").notNull().default(""),
+  thumbnail: text("thumbnail"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

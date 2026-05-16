@@ -52,6 +52,7 @@ export const GetProjectResponse = zod.object({
   "fileName": zod.string(),
   "projectName": zod.string(),
   "projectId": zod.string(),
+  "thumbnail": zod.string().nullish(),
   "createdAt": zod.string()
 }))
 })
@@ -87,6 +88,7 @@ export const ListPrototypesResponseItem = zod.object({
   "fileName": zod.string(),
   "projectName": zod.string(),
   "projectId": zod.string(),
+  "thumbnail": zod.string().nullish(),
   "createdAt": zod.string()
 })
 export const ListPrototypesResponse = zod.array(ListPrototypesResponseItem)

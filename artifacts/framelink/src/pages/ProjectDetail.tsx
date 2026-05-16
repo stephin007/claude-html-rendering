@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useParams, useLocation, Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -19,9 +19,17 @@ export default function ProjectDetail() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   
-  const { data: project } = useGetProject(id as string, {
+  const { data: project, refetch } = useGetProject(id as string, {
     query: { enabled: !!id, queryKey: getGetProjectQueryKey(id as string) },
   });
+
+  // Poll every 3 s while any prototype is still missing its thumbnail (async generation)
+  useEffect(() => {
+    const hasPending = project?.prototypes?.some((p) => p.thumbnail === null);
+    if (!hasPending) return;
+    const timer = setInterval(() => { void refetch(); }, 3000);
+    return () => clearInterval(timer);
+  }, [project, refetch]);
 
   useTitle(project?.name ?? null);
 
@@ -139,79 +147,91 @@ export default function ProjectDetail() {
             </button>
           </div>
 
-          {/* List Section */}
+          {/* Prototype card grid */}
           <div className="w-full">
             {project.prototypes && project.prototypes.length > 0 ? (
-              <div className="flex flex-col border-t border-border">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px border border-border">
                 {project.prototypes.map((p) => (
                   <div
                     key={p.id}
-                    className="flex flex-wrap md:flex-nowrap justify-between items-center py-4 px-4 border-b border-border border-l-2 border-l-transparent hover:border-l-accent bg-background transition-colors interactive-element group"
+                    className="flex flex-col bg-background border-accent/0 hover:border-l-accent group"
                     data-testid={`row-prototype-${p.id}`}
                   >
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 flex-grow min-w-0 mr-4">
-                      <Link
-                        href={`/view/${p.id}`}
-                        className="font-bold text-accent truncate hover:underline underline-offset-2 interactive-element"
-                        data-testid={`link-prototype-${p.id}`}
-                      >
-                        {p.fileName}
-                      </Link>
-                      <span className="text-muted-foreground truncate hidden sm:inline">|</span>
-                      <span className="text-muted-foreground text-sm">{new Date(p.createdAt).toLocaleDateString()}</span>
-                    </div>
+                    {/* Thumbnail */}
+                    <Link href={`/view/${p.id}`} className="block" data-testid={`link-prototype-${p.id}`}>
+                      {p.thumbnail ? (
+                        <img
+                          src={p.thumbnail}
+                          alt={p.fileName}
+                          className="w-full h-36 object-cover object-top border-b border-border"
+                        />
+                      ) : (
+                        <div className="w-full h-36 border-b border-border bg-card flex items-center justify-center">
+                          <span className="text-xs text-muted-foreground uppercase tracking-widest text-center px-4">
+                            {p.thumbnail === null ? "// GENERATING..." : p.fileName}
+                          </span>
+                        </div>
+                      )}
+                    </Link>
 
-                    <div className="flex items-center gap-4 shrink-0 mt-4 md:mt-0">
-                      <button
-                        onClick={() => setLocation(`/view/${p.id}`)}
-                        className="text-sm tracking-widest uppercase hover:text-accent interactive-element"
-                        data-testid={`btn-review-${p.id}`}
-                      >
-                        → REVIEW
-                      </button>
-                      
-                      <button
-                        onClick={(e) => handleShare(p.id, e)}
-                        className="text-sm tracking-widest uppercase hover:text-accent interactive-element w-24 text-left"
-                        data-testid={`btn-share-${p.id}`}
-                      >
-                        {copiedId === p.id ? "// COPIED" : "→ SHARE"}
-                      </button>
+                    {/* Info + actions */}
+                    <div className="flex flex-col gap-3 p-3 flex-1">
+                      <div className="flex flex-col gap-1 min-w-0">
+                        <Link
+                          href={`/view/${p.id}`}
+                          className="font-bold text-accent truncate hover:underline underline-offset-2 text-sm interactive-element"
+                        >
+                          {p.fileName}
+                        </Link>
+                        <span className="text-muted-foreground text-xs">{new Date(p.createdAt).toLocaleDateString()}</span>
+                      </div>
 
-                      <div className="w-48 text-right">
-                        {deleteConfirmId === p.id ? (
-                          <div className="flex items-center justify-end gap-2 text-sm">
-                            <span className="text-muted-foreground uppercase mr-2">DELETE {p.fileName}?</span>
+                      <div className="flex items-center gap-3 mt-auto pt-2 border-t border-border">
+                        <button
+                          onClick={() => setLocation(`/view/${p.id}`)}
+                          className="text-xs tracking-widest uppercase hover:text-accent interactive-element"
+                          data-testid={`btn-review-${p.id}`}
+                        >
+                          → REVIEW
+                        </button>
+
+                        <button
+                          onClick={(e) => handleShare(p.id, e)}
+                          className="text-xs tracking-widest uppercase hover:text-accent interactive-element w-20 text-left"
+                          data-testid={`btn-share-${p.id}`}
+                        >
+                          {copiedId === p.id ? "// COPIED" : "→ SHARE"}
+                        </button>
+
+                        <div className="ml-auto">
+                          {deleteConfirmId === p.id ? (
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="text-muted-foreground uppercase">DELETE?</span>
+                              <button
+                                onClick={(e) => handleDelete(p.id, e)}
+                                className="text-accent hover:underline font-bold"
+                                data-testid={`btn-confirm-delete-${p.id}`}
+                              >
+                                Y
+                              </button>
+                              <span className="text-muted-foreground">/</span>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(null); }}
+                                className="text-foreground hover:underline"
+                              >
+                                N
+                              </button>
+                            </div>
+                          ) : (
                             <button
-                              onClick={(e) => handleDelete(p.id, e)}
-                              className="text-accent hover:underline font-bold"
-                              data-testid={`btn-confirm-delete-${p.id}`}
+                              onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(p.id); }}
+                              className="text-xs tracking-widest uppercase text-muted-foreground hover:text-red-500 interactive-element"
+                              data-testid={`btn-delete-${p.id}`}
                             >
-                              Y
+                              ✕ DELETE
                             </button>
-                            <span className="text-muted-foreground">/</span>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeleteConfirmId(null);
-                              }}
-                              className="text-foreground hover:underline"
-                            >
-                              N
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteConfirmId(p.id);
-                            }}
-                            className="text-sm tracking-widest uppercase text-muted-foreground hover:text-red-500 interactive-element"
-                            data-testid={`btn-delete-${p.id}`}
-                          >
-                            ✕ DELETE
-                          </button>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

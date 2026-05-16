@@ -11,5 +11,6 @@ export interface PrototypeMeta {
   fileName: string;
   projectName: string;
   projectId: string;
+  thumbnail?: string | null;
   createdAt: string;
 }
