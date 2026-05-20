@@ -11,9 +11,8 @@ const PgStore = connectPgSimple(session);
 
 const app: Express = express();
 
-// Trust the first proxy hop (Replit's HTTPS edge terminates TLS and forwards
-// HTTP internally — without this, secure cookies are never sent because Express
-// thinks the connection is plain HTTP).
+// Trust the first proxy hop (the edge proxy terminates TLS and forwards HTTP
+// internally — without this, secure cookies are never sent).
 app.set("trust proxy", 1);
 
 app.use(

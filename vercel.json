@@ -1,0 +1,9 @@
+{
+  "buildCommand": "pnpm --filter @workspace/framelink run build",
+  "installCommand": "pnpm install",
+  "outputDirectory": "artifacts/framelink/dist/public",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

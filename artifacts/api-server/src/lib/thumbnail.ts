@@ -1,9 +1,9 @@
-import { chromium } from "playwright";
-
 export async function generateThumbnail(htmlContent: string): Promise<string | null> {
-  let browser: Awaited<ReturnType<typeof chromium.launch>> | null = null;
+  let browser: { close(): Promise<void> } | null = null;
   try {
-    const launchOptions: Parameters<typeof chromium.launch>[0] = {
+    const { chromium } = await import("playwright");
+    type LaunchOptions = Parameters<typeof chromium.launch>[0];
+    const launchOptions: LaunchOptions = {
       args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
     };
     if (process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH) {
