@@ -326,14 +326,26 @@ router.delete("/prototypes/:id", requireAuth, async (req, res) => {
     res.status(400).json({ error: "Invalid params" });
     return;
   }
-  const [deleted] = await db
-    .delete(prototypesTable)
+  const ownerId = req.session.userId as string;
+  const [existing] = await db
+    .select()
+    .from(prototypesTable)
     .where(eq(prototypesTable.id, parsed.data.id))
-    .returning();
-  if (!deleted) {
+    .limit(1);
+  if (!existing) {
     res.status(404).json({ error: "Prototype not found" });
     return;
   }
+  const [project] = await db
+    .select()
+    .from(projectsTable)
+    .where(eq(projectsTable.id, existing.projectId ?? ""))
+    .limit(1);
+  if (!project || project.ownerId !== ownerId) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  await db.delete(prototypesTable).where(eq(prototypesTable.id, parsed.data.id));
   res.json({ success: true });
 });
 
@@ -413,18 +425,25 @@ router.patch("/comments/:id/resolve", requireAuth, async (req, res) => {
     res.status(400).json({ error: "Invalid params" });
     return;
   }
-  const [existing] = await db
-    .select()
+  const ownerId = req.session.userId as string;
+  const [row] = await db
+    .select({ comment: commentsTable, projectOwnerId: projectsTable.ownerId })
     .from(commentsTable)
+    .innerJoin(prototypesTable, eq(prototypesTable.id, commentsTable.prototypeId))
+    .innerJoin(projectsTable, eq(projectsTable.id, prototypesTable.projectId))
     .where(eq(commentsTable.id, parsed.data.id))
     .limit(1);
-  if (!existing) {
+  if (!row) {
     res.status(404).json({ error: "Comment not found" });
+    return;
+  }
+  if (row.projectOwnerId !== ownerId) {
+    res.status(403).json({ error: "Forbidden" });
     return;
   }
   const [comment] = await db
     .update(commentsTable)
-    .set({ resolved: !existing.resolved })
+    .set({ resolved: !row.comment.resolved })
     .where(eq(commentsTable.id, parsed.data.id))
     .returning();
   res.json({
@@ -450,13 +469,20 @@ router.patch("/comments/:id", requireAuth, async (req, res) => {
     res.status(400).json({ error: "Invalid request body" });
     return;
   }
-  const [existing] = await db
-    .select()
+  const ownerId = req.session.userId as string;
+  const [row] = await db
+    .select({ comment: commentsTable, projectOwnerId: projectsTable.ownerId })
     .from(commentsTable)
+    .innerJoin(prototypesTable, eq(prototypesTable.id, commentsTable.prototypeId))
+    .innerJoin(projectsTable, eq(projectsTable.id, prototypesTable.projectId))
     .where(eq(commentsTable.id, parsed.data.id))
     .limit(1);
-  if (!existing) {
+  if (!row) {
     res.status(404).json({ error: "Comment not found" });
+    return;
+  }
+  if (row.projectOwnerId !== ownerId) {
+    res.status(403).json({ error: "Forbidden" });
     return;
   }
   const [comment] = await db
@@ -482,14 +508,23 @@ router.delete("/comments/:id", requireAuth, async (req, res) => {
     res.status(400).json({ error: "Invalid params" });
     return;
   }
-  const [deleted] = await db
-    .delete(commentsTable)
+  const ownerId = req.session.userId as string;
+  const [row] = await db
+    .select({ projectOwnerId: projectsTable.ownerId })
+    .from(commentsTable)
+    .innerJoin(prototypesTable, eq(prototypesTable.id, commentsTable.prototypeId))
+    .innerJoin(projectsTable, eq(projectsTable.id, prototypesTable.projectId))
     .where(eq(commentsTable.id, parsed.data.id))
-    .returning();
-  if (!deleted) {
+    .limit(1);
+  if (!row) {
     res.status(404).json({ error: "Comment not found" });
     return;
   }
+  if (row.projectOwnerId !== ownerId) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  await db.delete(commentsTable).where(eq(commentsTable.id, parsed.data.id));
   res.json({ success: true });
 });
 

@@ -20,7 +20,7 @@ export const HealthCheckResponse = zod.object({
  * @summary Create a new project
  */
 export const CreateProjectBody = zod.object({
-  "name": zod.string()
+  "name": zod.string().max(255)
 })
 
 
@@ -66,7 +66,7 @@ export const UpdateProjectParams = zod.object({
 })
 
 export const UpdateProjectBody = zod.object({
-  "name": zod.string()
+  "name": zod.string().max(255)
 })
 
 export const UpdateProjectResponse = zod.object({
@@ -92,8 +92,8 @@ export const DeleteProjectResponse = zod.object({
  * @summary Upload an HTML file to a project
  */
 export const CreatePrototypeBody = zod.object({
-  "htmlContent": zod.string(),
-  "fileName": zod.string(),
+  "htmlContent": zod.string().max(5242880),
+  "fileName": zod.string().max(255),
   "projectId": zod.string()
 })
 
@@ -195,7 +195,7 @@ export const CreateCommentParams = zod.object({
 export const CreateCommentBody = zod.object({
   "x": zod.number(),
   "y": zod.number(),
-  "text": zod.string(),
+  "text": zod.string().max(10000),
   "thumbnail": zod.string().nullish()
 })
 
@@ -228,7 +228,7 @@ export const UpdateCommentParams = zod.object({
 })
 
 export const UpdateCommentBody = zod.object({
-  "text": zod.string()
+  "text": zod.string().max(10000)
 })
 
 export const UpdateCommentResponse = zod.object({

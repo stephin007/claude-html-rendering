@@ -213,7 +213,7 @@ export default function View() {
 
   const copyForClaude = () => {
     const text = `Feedback on ${prototype.projectName} — ${prototype.fileName} — ${comments.length} comments:\n\n${comments
-      .map((c, i) => `#${i + 1} — ${c.text}`)
+      .map((c, i) => `#${i + 1} — ${c.text.replace(/`/g, "\\`")}`)
       .join("\n")}`;
     navigator.clipboard.writeText(text);
   };

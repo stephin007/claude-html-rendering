@@ -362,6 +362,7 @@ components:
       properties:
         name:
           type: string
+          maxLength: 255
 
     ProjectUpdateInput:
       type: object
@@ -369,6 +370,7 @@ components:
       properties:
         name:
           type: string
+          maxLength: 255
 
     Project:
       type: object
@@ -415,8 +417,10 @@ components:
       properties:
         htmlContent:
           type: string
+          maxLength: 5242880
         fileName:
           type: string
+          maxLength: 255
         projectId:
           type: string
 
@@ -475,6 +479,7 @@ components:
           type: number
         text:
           type: string
+          maxLength: 10000
         thumbnail:
           type: string
           nullable: true
@@ -485,6 +490,7 @@ components:
       properties:
         text:
           type: string
+          maxLength: 10000
 
     Comment:
       type: object
