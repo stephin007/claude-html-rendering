@@ -1,6 +1,6 @@
 {
   "framework": "vite",
-  "buildCommand": "pnpm --filter @workspace/framelink run build",
+  "buildCommand": "pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/framelink run build",
   "installCommand": "pnpm install",
   "outputDirectory": "dist",
   "rewrites": [
