@@ -2,7 +2,7 @@
   "framework": "vite",
   "buildCommand": "pnpm --filter @workspace/framelink run build",
   "installCommand": "pnpm install",
-  "outputDirectory": "artifacts/framelink/dist",
+  "outputDirectory": "dist",
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api" },
     { "source": "/(.*)", "destination": "/index.html" }
