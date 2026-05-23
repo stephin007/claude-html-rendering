@@ -57,6 +57,7 @@ export const commentsTable = pgTable("comments", {
   text: text("text").notNull(),
   resolved: boolean("resolved").default(false).notNull(),
   authorEmail: text("author_email"),
+  thumbnail: text("thumbnail"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

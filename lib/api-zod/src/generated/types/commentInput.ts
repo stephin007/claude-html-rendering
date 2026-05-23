@@ -10,4 +10,5 @@ export interface CommentInput {
   x: number;
   y: number;
   text: string;
+  thumbnail?: string | null;
 }

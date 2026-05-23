@@ -90,15 +90,15 @@ export default function View() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLElement && e.target.closest("textarea, input")) return;
-      if (e.key === "c" || e.key === "C") {
-        setCommentMode((prev) => !prev);
-        setPopup(null);
-      } else if (e.key === "Escape") {
+      if (e.key === "Escape") {
         if (popup !== null) {
           setPopup(null);
         } else if (commentMode) {
           setCommentMode(false);
         }
+      } else if (e.key === "c" || e.key === "C") {
+        setCommentMode((prev) => !prev);
+        setPopup(null);
       }
     };
     document.addEventListener("keydown", handleKeyDown);
@@ -106,6 +106,7 @@ export default function View() {
   }, [popup, commentMode]);
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
   const [iframeHeight, setIframeHeight] = useState<number>(0);
 
   const blobUrl = useMemo(() => {
@@ -149,7 +150,7 @@ export default function View() {
     setNewCommentText("");
   };
 
-  const handleSaveComment = () => {
+  const handleSaveComment = async () => {
     if (!popup || !newCommentText.trim()) return;
     createComment.mutate(
       { id, data: { x: popup.x, y: popup.y, text: newCommentText.trim() } },
@@ -468,6 +469,7 @@ export default function View() {
       <div className="flex-1 flex overflow-hidden">
         {/* ── Design / Prototype pane ─────────────────────────────────────── */}
         <main
+          ref={mainRef}
           className={`bg-white ${
             mobileTab === "design" ? "flex-1" : "hidden"
           } md:flex md:flex-1 overflow-auto`}
@@ -519,9 +521,7 @@ export default function View() {
                     e.stopPropagation();
                     setActiveCommentId(comment.id);
                     const node = cardRefs.current.get(comment.id);
-                    if (node) {
-                      node.scrollIntoView({ behavior: "smooth", block: "nearest" });
-                    }
+                    if (node) node.scrollIntoView({ behavior: "smooth", block: "nearest" });
                   }}
                   data-testid={`bubble-${comment.id}`}
                 >

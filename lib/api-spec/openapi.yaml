@@ -475,6 +475,9 @@ components:
           type: number
         text:
           type: string
+        thumbnail:
+          type: string
+          nullable: true
 
     CommentUpdateInput:
       type: object
@@ -500,6 +503,9 @@ components:
         resolved:
           type: boolean
         authorEmail:
+          type: string
+          nullable: true
+        thumbnail:
           type: string
           nullable: true
         createdAt:

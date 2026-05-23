@@ -359,6 +359,7 @@ router.get("/prototypes/:id/comments", async (req, res) => {
       text: c.text,
       resolved: c.resolved,
       authorEmail: c.authorEmail ?? null,
+      thumbnail: c.thumbnail ?? null,
       createdAt: c.createdAt.toISOString(),
     }))
   );
@@ -375,7 +376,7 @@ router.post("/prototypes/:id/comments", async (req, res) => {
     res.status(400).json({ error: "Invalid request body" });
     return;
   }
-  const { x, y, text } = bodyParsed.data;
+  const { x, y, text, thumbnail } = bodyParsed.data;
 
   // Resolve author email from session if logged in
   let authorEmail: string | null = null;
@@ -391,7 +392,7 @@ router.post("/prototypes/:id/comments", async (req, res) => {
 
   const [comment] = await db
     .insert(commentsTable)
-    .values({ prototypeId: paramsParsed.data.id, x, y, text, authorEmail })
+    .values({ prototypeId: paramsParsed.data.id, x, y, text, authorEmail, thumbnail: thumbnail ?? null })
     .returning();
   res.status(201).json({
     id: comment.id,
@@ -401,6 +402,7 @@ router.post("/prototypes/:id/comments", async (req, res) => {
     text: comment.text,
     resolved: comment.resolved,
     authorEmail: comment.authorEmail ?? null,
+    thumbnail: comment.thumbnail ?? null,
     createdAt: comment.createdAt.toISOString(),
   });
 });

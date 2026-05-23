@@ -14,5 +14,6 @@ export interface Comment {
   text: string;
   resolved: boolean;
   authorEmail?: string | null;
+  thumbnail?: string | null;
   createdAt: string;
 }

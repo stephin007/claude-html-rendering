@@ -179,6 +179,7 @@ export const GetCommentsResponseItem = zod.object({
   "text": zod.string(),
   "resolved": zod.boolean(),
   "authorEmail": zod.string().nullish(),
+  "thumbnail": zod.string().nullish(),
   "createdAt": zod.string()
 })
 export const GetCommentsResponse = zod.array(GetCommentsResponseItem)
@@ -194,7 +195,8 @@ export const CreateCommentParams = zod.object({
 export const CreateCommentBody = zod.object({
   "x": zod.number(),
   "y": zod.number(),
-  "text": zod.string()
+  "text": zod.string(),
+  "thumbnail": zod.string().nullish()
 })
 
 
@@ -213,6 +215,7 @@ export const ToggleCommentResolvedResponse = zod.object({
   "text": zod.string(),
   "resolved": zod.boolean(),
   "authorEmail": zod.string().nullish(),
+  "thumbnail": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -236,6 +239,7 @@ export const UpdateCommentResponse = zod.object({
   "text": zod.string(),
   "resolved": zod.boolean(),
   "authorEmail": zod.string().nullish(),
+  "thumbnail": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
