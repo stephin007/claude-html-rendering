@@ -1,4 +1,10 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
 import { useParams, Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -49,7 +55,9 @@ export default function View() {
     query: { enabled: !!id, queryKey: getGetPrototypeQueryKey(id) },
   });
 
-  useTitle(prototype ? `${prototype.projectName} / ${prototype.fileName}` : null);
+  useTitle(
+    prototype ? `${prototype.projectName} / ${prototype.fileName}` : null
+  );
 
   const { data: comments = [] } = useGetComments(id, {
     query: {
@@ -89,7 +97,11 @@ export default function View() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLElement && e.target.closest("textarea, input")) return;
+      if (
+        e.target instanceof HTMLElement &&
+        e.target.closest("textarea, input")
+      )
+        return;
       if (e.key === "Escape") {
         if (popup !== null) {
           setPopup(null);
@@ -158,7 +170,9 @@ export default function View() {
         onSuccess: () => {
           setPopup(null);
           setNewCommentText("");
-          queryClient.invalidateQueries({ queryKey: getGetCommentsQueryKey(id) });
+          queryClient.invalidateQueries({
+            queryKey: getGetCommentsQueryKey(id),
+          });
         },
       }
     );
@@ -168,7 +182,12 @@ export default function View() {
     e.stopPropagation();
     toggleResolved.mutate(
       { id: commentId },
-      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCommentsQueryKey(id) }) }
+      {
+        onSuccess: () =>
+          queryClient.invalidateQueries({
+            queryKey: getGetCommentsQueryKey(id),
+          }),
+      }
     );
   };
 
@@ -176,11 +195,20 @@ export default function View() {
     e.stopPropagation();
     deleteComment.mutate(
       { id: commentId },
-      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCommentsQueryKey(id) }) }
+      {
+        onSuccess: () =>
+          queryClient.invalidateQueries({
+            queryKey: getGetCommentsQueryKey(id),
+          }),
+      }
     );
   };
 
-  const startEdit = (commentId: string, currentText: string, e: React.SyntheticEvent) => {
+  const startEdit = (
+    commentId: string,
+    currentText: string,
+    e: React.SyntheticEvent
+  ) => {
     e.stopPropagation();
     setEditingCommentId(commentId);
     setEditText(currentText);
@@ -194,7 +222,9 @@ export default function View() {
         onSuccess: () => {
           setEditingCommentId(null);
           setEditText("");
-          queryClient.invalidateQueries({ queryKey: getGetCommentsQueryKey(id) });
+          queryClient.invalidateQueries({
+            queryKey: getGetCommentsQueryKey(id),
+          });
         },
       }
     );
@@ -219,30 +249,47 @@ export default function View() {
   };
 
   // ── Comment card (shared between sidebar and mobile comments tab) ─────────────
-  const CommentCard = ({ comment, idx }: { comment: (typeof comments)[number]; idx: number }) => {
+  const CommentCard = ({
+    comment,
+    idx,
+  }: {
+    comment: (typeof comments)[number];
+    idx: number;
+  }) => {
     const isHovered = hoveredBubbleId === comment.id;
     const isActive = activeCommentId === comment.id;
     return (
       <div
         ref={setCardRef(comment.id)}
         className={`p-3 border-l-2 cursor-pointer border border-border relative group transition-colors ${
-          comment.resolved ? "opacity-60 border-l-[#444444] bg-card" : "border-l-accent bg-card"
+          comment.resolved
+            ? "opacity-60 border-l-[#444444] bg-card"
+            : "border-l-accent bg-card"
         } ${isActive ? "ring-1 ring-border" : ""} ${isHovered ? "bg-accent/10 border-accent" : ""}`}
         onClick={() => setActiveCommentId(comment.id)}
         data-testid={`card-${comment.id}`}
       >
         {editingCommentId === comment.id ? (
-          <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="flex flex-col gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center gap-2 mb-1">
               <span
                 className={`w-5 h-5 shrink-0 flex items-center justify-center text-xs ${
-                  comment.resolved ? "bg-[#444444] text-gray-300" : "bg-accent text-background"
+                  comment.resolved
+                    ? "bg-[#444444] text-gray-300"
+                    : "bg-accent text-background"
                 }`}
-                style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 25% 100%, 0 75%)" }}
+                style={{
+                  clipPath: "polygon(0 0, 100% 0, 100% 100%, 25% 100%, 0 75%)",
+                }}
               >
                 {idx + 1}
               </span>
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">Editing</span>
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">
+                Editing
+              </span>
             </div>
             <textarea
               ref={editRef}
@@ -283,9 +330,13 @@ export default function View() {
             <div className="flex items-start gap-2 mb-2 pr-14">
               <span
                 className={`w-5 h-5 shrink-0 flex items-center justify-center text-xs ${
-                  comment.resolved ? "bg-[#444444] text-gray-300" : "bg-accent text-background"
+                  comment.resolved
+                    ? "bg-[#444444] text-gray-300"
+                    : "bg-accent text-background"
                 }`}
-                style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 25% 100%, 0 75%)" }}
+                style={{
+                  clipPath: "polygon(0 0, 100% 0, 100% 100%, 25% 100%, 0 75%)",
+                }}
               >
                 {idx + 1}
               </span>
@@ -295,7 +346,9 @@ export default function View() {
                 </span>
                 <p
                   className={`text-sm ${
-                    comment.resolved ? "line-through text-muted-foreground" : "text-foreground"
+                    comment.resolved
+                      ? "line-through text-muted-foreground"
+                      : "text-foreground"
                   }`}
                   onDoubleClick={(e) => startEdit(comment.id, comment.text, e)}
                   title="Double-click to edit"
@@ -344,9 +397,7 @@ export default function View() {
   const NewCommentPopup = ({ fixed }: { fixed?: boolean }) => (
     <div
       className={`comment-popup z-50 border border-border p-3 shadow-2xl flex flex-col gap-3 ${
-        fixed
-          ? "fixed inset-x-4 bottom-24 md:hidden"
-          : "absolute min-w-[240px]"
+        fixed ? "fixed inset-x-4 bottom-24 md:hidden" : "absolute min-w-[240px]"
       }`}
       style={
         fixed
@@ -480,133 +531,153 @@ export default function View() {
               Height is driven by the iframe content so comments anchor to
               the full page, not just the visible viewport slice. */}
           <div className="relative min-w-[1024px] md:min-w-0 md:flex-1">
-          <iframe
-            ref={iframeRef}
-            src={blobUrl}
-            className="w-full border-none block"
-            style={{ height: iframeHeight > 0 ? `${iframeHeight}px` : "100vh" }}
-            title="Prototype View"
-            sandbox="allow-scripts allow-same-origin"
-            onLoad={handleIframeLoad}
-          />
+            <iframe
+              ref={iframeRef}
+              src={blobUrl}
+              className="w-full border-none block"
+              style={{
+                height: iframeHeight > 0 ? `${iframeHeight}px` : "100vh",
+              }}
+              title="Prototype View"
+              sandbox="allow-scripts allow-same-origin"
+              onLoad={handleIframeLoad}
+            />
 
-          {/* Comment overlay */}
-          <div
-            className={`absolute inset-0 z-10 ${commentMode ? "cursor-crosshair" : ""}`}
-            style={{ pointerEvents: commentMode ? "auto" : "none" }}
-            onClick={handleOverlayClick}
-            data-testid="overlay"
-          >
-            {comments.map((comment, idx) => (
-              <div
-                key={comment.id}
-                className="comment-bubble absolute"
-                style={{
-                  left: `${comment.x}%`,
-                  top: `${comment.y}%`,
-                  transform: "translate(-50%, -50%)",
-                  pointerEvents: "auto",
-                  zIndex: activeCommentId === comment.id ? 50 : 20,
-                }}
-                onMouseEnter={() => setHoveredBubbleId(comment.id)}
-                onMouseLeave={() => setHoveredBubbleId(null)}
-              >
+            {/* Comment overlay */}
+            <div
+              className={`absolute inset-0 z-10 ${commentMode ? "cursor-crosshair" : ""}`}
+              style={{ pointerEvents: commentMode ? "auto" : "none" }}
+              onClick={handleOverlayClick}
+              data-testid="overlay"
+            >
+              {comments.map((comment, idx) => (
                 <div
-                  className={`w-7 h-7 md:w-6 md:h-6 flex items-center justify-center cursor-pointer transition-transform
+                  key={comment.id}
+                  className="comment-bubble absolute"
+                  style={{
+                    left: `${comment.x}%`,
+                    top: `${comment.y}%`,
+                    transform: "translate(-50%, -50%)",
+                    pointerEvents: "auto",
+                    zIndex: activeCommentId === comment.id ? 50 : 20,
+                  }}
+                  onMouseEnter={() => setHoveredBubbleId(comment.id)}
+                  onMouseLeave={() => setHoveredBubbleId(null)}
+                >
+                  <div
+                    className={`w-7 h-7 md:w-6 md:h-6 flex items-center justify-center cursor-pointer transition-transform
                     ${comment.resolved ? "bg-[#444444] text-gray-300" : "bg-accent text-background"}
                     ${activeCommentId === comment.id || hoveredBubbleId === comment.id ? "scale-125" : ""}
                   `}
-                  style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 25% 100%, 0 75%)" }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveCommentId(comment.id);
-                    const node = cardRefs.current.get(comment.id);
-                    if (node) node.scrollIntoView({ behavior: "smooth", block: "nearest" });
-                  }}
-                  data-testid={`bubble-${comment.id}`}
-                >
-                  <span className="text-xs font-bold">{idx + 1}</span>
-                </div>
-
-                {/* Hover tooltip — desktop only */}
-                {hoveredBubbleId === comment.id && (
-                  <div
-                    className="hidden md:block absolute left-7 top-0 z-50 bg-background border border-border px-2 py-1 text-xs text-foreground whitespace-pre-wrap max-w-[220px] shadow-lg pointer-events-none"
-                    style={{ minWidth: "120px" }}
-                  >
-                    {comment.text}
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {/* New comment popup — desktop: anchored near click; mobile: fixed bottom */}
-            {popup && (
-              <>
-                {/* Pin marker at exact click position */}
-                <div
-                  className="hidden md:block absolute pointer-events-none z-[60]"
-                  style={{
-                    left: `${popup.x}%`,
-                    top: `${popup.y}%`,
-                    transform: "translate(-50%, -50%)",
-                  }}
-                >
-                  <div className="w-3 h-3 bg-accent" style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 25% 100%, 0 75%)" }} />
-                </div>
-
-                {/* Desktop popup — hidden on mobile */}
-                <div
-                  className="comment-popup hidden md:flex absolute z-50 border border-border p-3 shadow-2xl flex-col gap-3 min-w-[240px]"
-                  style={{
-                    left: `${Math.min(Math.max(popup.x, 5), 70)}%`,
-                    top: `${Math.min(Math.max(popup.y, 5), 80)}%`,
-                    backgroundColor: "#0a0a0a",
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                  data-testid="popup-new-comment"
-                >
-                  <textarea
-                    ref={inputRef}
-                    value={newCommentText}
-                    onChange={(e) => setNewCommentText(e.target.value)}
-                    className="w-full bg-background border border-border text-foreground p-2 min-h-[80px] resize-none outline-none focus:border-accent text-sm"
-                    placeholder="Leave a comment..."
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSaveComment();
-                      }
+                    style={{
+                      clipPath:
+                        "polygon(0 0, 100% 0, 100% 100%, 25% 100%, 0 75%)",
                     }}
-                  />
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => setPopup(null)}
-                      className="px-3 py-1 text-sm border border-border text-muted-foreground hover:border-accent hover:text-foreground interactive-element"
-                      data-testid="btn-cancel-comment"
-                    >
-                      CANCEL
-                    </button>
-                    <button
-                      onClick={handleSaveComment}
-                      className="px-3 py-1 text-sm border border-accent bg-accent text-background hover:opacity-90 interactive-element"
-                      data-testid="btn-save-comment"
-                    >
-                      SAVE
-                    </button>
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveCommentId(comment.id);
+                      const node = cardRefs.current.get(comment.id);
+                      if (node)
+                        node.scrollIntoView({
+                          behavior: "smooth",
+                          block: "nearest",
+                        });
+                    }}
+                    data-testid={`bubble-${comment.id}`}
+                  >
+                    <span className="text-xs font-bold">{idx + 1}</span>
                   </div>
+
+                  {/* Hover tooltip — desktop only */}
+                  {hoveredBubbleId === comment.id && (
+                    <div
+                      className="hidden md:block absolute left-7 top-0 z-50 bg-background border border-border px-2 py-1 text-xs text-foreground whitespace-pre-wrap max-w-[220px] shadow-lg pointer-events-none"
+                      style={{ minWidth: "120px" }}
+                    >
+                      {comment.text}
+                    </div>
+                  )}
                 </div>
-              </>
-            )}
+              ))}
+
+              {/* New comment popup — desktop: anchored near click; mobile: fixed bottom */}
+              {popup && (
+                <>
+                  {/* Pin marker at exact click position */}
+                  <div
+                    className="hidden md:block absolute pointer-events-none z-[60]"
+                    style={{
+                      left: `${popup.x}%`,
+                      top: `${popup.y}%`,
+                      transform: "translate(-50%, -50%)",
+                    }}
+                  >
+                    <div
+                      className="w-3 h-3 bg-accent"
+                      style={{
+                        clipPath:
+                          "polygon(0 0, 100% 0, 100% 100%, 25% 100%, 0 75%)",
+                      }}
+                    />
+                  </div>
+
+                  {/* Desktop popup — hidden on mobile */}
+                  <div
+                    className="comment-popup hidden md:flex absolute z-50 border border-border p-3 shadow-2xl flex-col gap-3 min-w-[240px]"
+                    style={{
+                      left: `${Math.min(Math.max(popup.x, 5), 70)}%`,
+                      top: `${Math.min(Math.max(popup.y, 5), 80)}%`,
+                      backgroundColor: "#0a0a0a",
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    data-testid="popup-new-comment"
+                  >
+                    <textarea
+                      ref={inputRef}
+                      value={newCommentText}
+                      onChange={(e) => setNewCommentText(e.target.value)}
+                      className="w-full bg-background border border-border text-foreground p-2 min-h-[80px] resize-none outline-none focus:border-accent text-sm"
+                      placeholder="Leave a comment..."
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSaveComment();
+                        }
+                      }}
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => setPopup(null)}
+                        className="px-3 py-1 text-sm border border-border text-muted-foreground hover:border-accent hover:text-foreground interactive-element"
+                        data-testid="btn-cancel-comment"
+                      >
+                        CANCEL
+                      </button>
+                      <button
+                        onClick={handleSaveComment}
+                        className="px-3 py-1 text-sm border border-accent bg-accent text-background hover:opacity-90 interactive-element"
+                        data-testid="btn-save-comment"
+                      >
+                        SAVE
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
-          </div>{/* end inner scroll container */}
+          {/* end inner scroll container */}
         </main>
 
         {/* ── Desktop sidebar ─────────────────────────────────────────────── */}
         <aside className="hidden md:flex w-[320px] shrink-0 border-l border-border bg-background flex-col">
           <div className="p-4 border-b border-border flex items-center justify-between shrink-0">
-            <h2 className="tracking-widest uppercase text-sm font-bold">COMMENTS</h2>
-            <span className="text-muted-foreground text-sm">{comments.length}</span>
+            <h2 className="tracking-widest uppercase text-sm font-bold">
+              COMMENTS
+            </h2>
+            <span className="text-muted-foreground text-sm">
+              {comments.length}
+            </span>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -653,7 +724,10 @@ export default function View() {
 
       {/* ── Mobile new-comment bottom sheet ─────────────────────────────────── */}
       {popup && (
-        <div className="md:hidden fixed inset-0 z-50 flex items-end" onClick={() => setPopup(null)}>
+        <div
+          className="md:hidden fixed inset-0 z-50 flex items-end"
+          onClick={() => setPopup(null)}
+        >
           <div
             className="comment-popup w-full border-t border-border p-4 flex flex-col gap-3"
             style={{ backgroundColor: "#0a0a0a" }}
@@ -704,10 +778,12 @@ export default function View() {
 function EmptyState() {
   return (
     <div className="flex flex-col items-center gap-3 py-12 text-center">
-      <p className="text-muted-foreground text-sm uppercase tracking-widest">No comments yet</p>
+      <p className="text-muted-foreground text-sm uppercase tracking-widest">
+        No comments yet
+      </p>
       <p className="text-muted-foreground text-xs leading-relaxed max-w-[200px]">
-        Click <span className="text-accent font-bold">+ ADD COMMENT</span> in the toolbar, then
-        tap anywhere on the design to pin feedback
+        Click <span className="text-accent font-bold">+ ADD COMMENT</span> in
+        the toolbar, then tap anywhere on the design to pin feedback
       </p>
     </div>
   );
