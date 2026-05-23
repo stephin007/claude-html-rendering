@@ -8,7 +8,7 @@ import {
   useCreatePrototype,
   useDeleteProject,
   useUpdateProject,
-  getListProjectsQueryKey
+  getListProjectsQueryKey,
 } from "@workspace/api-client-react";
 import { useAuthContext } from "@/context/AuthContext";
 
@@ -34,13 +34,19 @@ export default function Home() {
   const handleUpload = async () => {
     if (!file || !projectName.trim()) return;
     const text = await file.text();
-    
+
     createProject.mutate(
       { data: { name: projectName.trim() } },
       {
         onSuccess: (project) => {
           createPrototype.mutate(
-            { data: { htmlContent: text, fileName: file.name, projectId: project.id } },
+            {
+              data: {
+                htmlContent: text,
+                fileName: file.name,
+                projectId: project.id,
+              },
+            },
             {
               onSuccess: () => {
                 setLocation(`/project/${project.id}`);
@@ -52,17 +58,14 @@ export default function Home() {
     );
   };
 
-  const onDrop = useCallback(
-    (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      setIsDragging(false);
-      const droppedFile = e.dataTransfer.files?.[0];
-      if (droppedFile) {
-        setFile(droppedFile);
-      }
-    },
-    []
-  );
+  const onDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const droppedFile = e.dataTransfer.files?.[0];
+    if (droppedFile) {
+      setFile(droppedFile);
+    }
+  }, []);
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -77,14 +80,20 @@ export default function Home() {
       { id },
       {
         onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
+          queryClient.invalidateQueries({
+            queryKey: getListProjectsQueryKey(),
+          });
           setDeleteConfirmId(null);
-        }
+        },
       }
     );
   };
 
-  const startEditing = (id: string, currentName: string, e: React.MouseEvent) => {
+  const startEditing = (
+    id: string,
+    currentName: string,
+    e: React.MouseEvent
+  ) => {
     e.stopPropagation();
     setEditingId(id);
     setEditingName(currentName);
@@ -97,18 +106,24 @@ export default function Home() {
       setEditingId(null);
       return;
     }
-    queryClient.setQueryData(getListProjectsQueryKey(), (old: typeof projects) =>
-      old?.map((p) => (p.id === id ? { ...p, name: trimmed } : p))
+    queryClient.setQueryData(
+      getListProjectsQueryKey(),
+      (old: typeof projects) =>
+        old?.map((p) => (p.id === id ? { ...p, name: trimmed } : p))
     );
     setEditingId(null);
     updateProject.mutate(
       { id, data: { name: trimmed } },
       {
         onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
+          queryClient.invalidateQueries({
+            queryKey: getListProjectsQueryKey(),
+          });
         },
         onError: () => {
-          queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
+          queryClient.invalidateQueries({
+            queryKey: getListProjectsQueryKey(),
+          });
         },
       }
     );
@@ -124,16 +139,22 @@ export default function Home() {
     <div className="min-h-screen w-full flex flex-col items-center bg-background text-foreground p-8 font-mono">
       <div className="w-full max-w-5xl flex flex-col h-full grow">
         <header className="mb-16 flex justify-between items-end border-b border-border pb-4">
-          <h1 className="text-xl font-normal lowercase tracking-widest text-foreground">framelink</h1>
+          <h1 className="text-xl font-normal lowercase tracking-widest text-foreground">
+            framelink
+          </h1>
           <div className="flex items-center gap-6">
             <span className="text-muted-foreground uppercase tracking-wider text-sm hidden sm:block">
               {projects ? `// ${projects.length} PROJECTS` : ""}
             </span>
             {user && (
               <div className="flex items-center gap-4">
-                <span className="text-xs text-muted-foreground truncate max-w-[160px] hidden md:block">{user.email}</span>
+                <span className="text-xs text-muted-foreground truncate max-w-[160px] hidden md:block">
+                  {user.email}
+                </span>
                 <button
-                  onClick={async () => { await signOut(); }}
+                  onClick={async () => {
+                    await signOut();
+                  }}
                   className="text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
                 >
                   SIGN OUT
@@ -148,7 +169,9 @@ export default function Home() {
           <div className="w-full max-w-3xl flex flex-col gap-4">
             <div className="flex gap-4 items-stretch h-32">
               <div className="flex-1 flex flex-col justify-end">
-                <label className="mb-2 text-muted-foreground uppercase tracking-widest text-sm">PROJECT NAME</label>
+                <label className="mb-2 text-muted-foreground uppercase tracking-widest text-sm">
+                  PROJECT NAME
+                </label>
                 <input
                   type="text"
                   value={projectName}
@@ -161,7 +184,11 @@ export default function Home() {
 
               <div
                 className={`flex-1 h-32 flex flex-col items-center justify-center border-2 border-dashed relative cursor-pointer interactive-element transition-colors ${
-                  isDragging ? "border-accent bg-card" : file ? "border-accent" : "border-border"
+                  isDragging
+                    ? "border-accent bg-card"
+                    : file
+                      ? "border-accent"
+                      : "border-border"
                 }`}
                 onDragOver={(e) => {
                   e.preventDefault();
@@ -183,7 +210,7 @@ export default function Home() {
                 </span>
               </div>
             </div>
-            
+
             <button
               onClick={handleUpload}
               disabled={!file || !projectName.trim() || isUploading}
@@ -239,10 +266,18 @@ export default function Home() {
                           </button>
                         </div>
                       )}
-                      <span className="text-muted-foreground truncate hidden sm:inline">|</span>
-                      <span className="text-muted-foreground truncate">// {p.fileCount} FILES</span>
-                      <span className="text-muted-foreground truncate hidden sm:inline">|</span>
-                      <span className="text-muted-foreground text-sm">{new Date(p.createdAt).toLocaleDateString()}</span>
+                      <span className="text-muted-foreground truncate hidden sm:inline">
+                        |
+                      </span>
+                      <span className="text-muted-foreground truncate">
+                        // {p.fileCount} FILES
+                      </span>
+                      <span className="text-muted-foreground truncate hidden sm:inline">
+                        |
+                      </span>
+                      <span className="text-muted-foreground text-sm">
+                        {new Date(p.createdAt).toLocaleDateString()}
+                      </span>
                     </div>
 
                     <div className="flex items-center gap-4 shrink-0 mt-4 md:mt-0">
@@ -257,7 +292,9 @@ export default function Home() {
                       <div className="w-48 text-right">
                         {deleteConfirmId === p.id ? (
                           <div className="flex items-center justify-end gap-2 text-sm">
-                            <span className="text-muted-foreground uppercase mr-2">DELETE {p.name}?</span>
+                            <span className="text-muted-foreground uppercase mr-2">
+                              DELETE {p.name}?
+                            </span>
                             <button
                               onClick={(e) => handleDelete(p.id, e)}
                               className="text-accent hover:underline font-bold"
