@@ -11,6 +11,7 @@
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },
+  "type": "module",
   "private": true,
   "devDependencies": {
     "prettier": "^3.8.3",
