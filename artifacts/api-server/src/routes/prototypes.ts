@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, projectsTable, prototypesTable, commentsTable, usersTable } from "@workspace/db";
 import { and, eq, sql } from "drizzle-orm";
 import { generateThumbnail } from "../lib/thumbnail";
+import { op } from "../lib/analytics";
 import {
   CreateProjectBody,
   GetProjectParams,
@@ -38,6 +39,7 @@ router.post("/projects", requireAuth, async (req, res) => {
     .insert(projectsTable)
     .values({ name: parsed.data.name, ownerId })
     .returning();
+  void op.track({ name: "project_created", profileId: ownerId, properties: { projectId: project.id, projectName: project.name } });
   res.status(201).json({
     id: project.id,
     name: project.name,
@@ -169,6 +171,7 @@ router.delete("/projects/:id", requireAuth, async (req, res) => {
     res.status(404).json({ error: "Project not found" });
     return;
   }
+  void op.track({ name: "project_deleted", profileId: ownerId, properties: { projectId: parsed.data.id } });
   res.json({ success: true });
 });
 
@@ -213,6 +216,8 @@ router.post("/prototypes", requireAuth, async (req, res) => {
     }
   })();
 
+  const ownerId = req.session.userId as string;
+  void op.track({ name: "prototype_created", profileId: ownerId, properties: { prototypeId: prototype.id, fileName, projectId, projectName } });
   res.status(201).json({
     id: prototype.id,
     htmlContent: prototype.htmlContent,
@@ -346,6 +351,7 @@ router.delete("/prototypes/:id", requireAuth, async (req, res) => {
     return;
   }
   await db.delete(prototypesTable).where(eq(prototypesTable.id, parsed.data.id));
+  void op.track({ name: "prototype_deleted", profileId: ownerId, properties: { prototypeId: parsed.data.id } });
   res.json({ success: true });
 });
 
@@ -406,6 +412,8 @@ router.post("/prototypes/:id/comments", async (req, res) => {
     .insert(commentsTable)
     .values({ prototypeId: paramsParsed.data.id, x, y, text, authorEmail, thumbnail: thumbnail ?? null })
     .returning();
+  const commenterId = req.session?.userId as string | undefined;
+  void op.track({ name: "comment_created", profileId: commenterId, properties: { commentId: comment.id, prototypeId: paramsParsed.data.id } });
   res.status(201).json({
     id: comment.id,
     prototypeId: comment.prototypeId,
@@ -525,6 +533,7 @@ router.delete("/comments/:id", requireAuth, async (req, res) => {
     return;
   }
   await db.delete(commentsTable).where(eq(commentsTable.id, parsed.data.id));
+  void op.track({ name: "comment_deleted", profileId: ownerId, properties: { commentId: parsed.data.id } });
   res.json({ success: true });
 });
 

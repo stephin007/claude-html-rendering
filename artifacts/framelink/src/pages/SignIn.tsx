@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuthContext } from "@/context/AuthContext";
 import { useTitle } from "@/hooks/useTitle";
+import { op } from "@/lib/analytics";
 
 export default function SignIn() {
   useTitle("Sign in");
@@ -28,6 +29,8 @@ export default function SignIn() {
         setError(data.error ?? "Login failed");
         return;
       }
+      op.identify({ profileId: data.id, email: data.email });
+      op.track("user_login", { method: "email" });
       await refetch();
       setLocation("/");
     } catch {

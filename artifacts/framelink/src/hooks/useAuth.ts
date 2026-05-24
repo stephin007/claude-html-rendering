@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { op } from "@/lib/analytics";
 
 export interface AuthUser {
   id: string;
@@ -13,7 +14,9 @@ export function useAuth() {
     try {
       const res = await fetch("/api/auth/me", { credentials: "include" });
       if (res.ok) {
-        setUser(await res.json());
+        const data: AuthUser = await res.json();
+        op.identify({ profileId: data.id, email: data.email });
+        setUser(data);
       } else {
         setUser(null);
       }
@@ -30,6 +33,8 @@ export function useAuth() {
 
   const signOut = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    op.track("user_logout");
+    op.clear();
     setUser(null);
   }, []);
 

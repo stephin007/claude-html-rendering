@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { z } from "zod/v4";
+import { op } from "../lib/analytics";
 
 declare module "express-session" {
   interface SessionData {
@@ -46,6 +47,8 @@ router.post("/auth/register", async (req, res) => {
   req.session.userId = user.id;
   req.session.userEmail = user.email;
 
+  void op.track({ name: "user_registered", profileId: user.id, properties: { email: user.email, method: "email" } });
+
   res.status(201).json({ id: user.id, email: user.email });
 });
 
@@ -77,11 +80,15 @@ router.post("/auth/login", async (req, res) => {
   req.session.userId = user.id;
   req.session.userEmail = user.email;
 
+  void op.track({ name: "user_login", profileId: user.id, properties: { method: "email" } });
+
   res.json({ id: user.id, email: user.email });
 });
 
 router.post("/auth/logout", (req, res) => {
+  const userId = req.session.userId;
   req.session.destroy(() => {
+    if (userId) void op.track({ name: "user_logout", profileId: userId });
     res.json({ success: true });
   });
 });
