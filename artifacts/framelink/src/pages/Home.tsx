@@ -11,6 +11,9 @@ import {
   getListProjectsQueryKey,
 } from "@workspace/api-client-react";
 import { useAuthContext } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
 export default function Home() {
   useTitle(null);
@@ -25,6 +28,7 @@ export default function Home() {
   const [editingName, setEditingName] = useState("");
   const editInputRef = useRef<HTMLInputElement>(null);
 
+  const { toast } = useToast();
   const createProject = useCreateProject();
   const createPrototype = useCreatePrototype();
   const deleteProject = useDeleteProject();
@@ -33,6 +37,16 @@ export default function Home() {
 
   const handleUpload = async () => {
     if (!file || !projectName.trim()) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast({
+        title: "File too large",
+        description: `Maximum file size is 20 MB. Your file is ${(file.size / 1024 / 1024).toFixed(1)} MB.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const text = await file.text();
 
     createProject.mutate(
@@ -51,8 +65,23 @@ export default function Home() {
               onSuccess: () => {
                 setLocation(`/project/${project.id}`);
               },
+              onError: (error) => {
+                toast({
+                  title: "Upload failed",
+                  description: error.message ?? "Could not upload the HTML file. Please try again.",
+                  variant: "destructive",
+                });
+                setLocation(`/project/${project.id}`);
+              },
             }
           );
+        },
+        onError: (error) => {
+          toast({
+            title: "Could not create project",
+            description: error.message ?? "Something went wrong. Please try again.",
+            variant: "destructive",
+          });
         },
       }
     );

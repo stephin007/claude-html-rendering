@@ -9,6 +9,9 @@ import {
   getGetProjectQueryKey
 } from "@workspace/api-client-react";
 import { useTitle } from "@/hooks/useTitle";
+import { useToast } from "@/hooks/use-toast";
+
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -58,22 +61,39 @@ export default function ProjectDetail() {
 
   useTitle(project?.name ?? null);
 
+  const { toast } = useToast();
   const createPrototype = useCreatePrototype();
   const deletePrototype = useDeletePrototype();
   const updatePrototype = useUpdatePrototype();
 
   const handleUpload = async () => {
     if (!file || !id) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast({
+        title: "File too large",
+        description: `Maximum file size is 20 MB. Your file is ${(file.size / 1024 / 1024).toFixed(1)} MB.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const text = await file.text();
-    
+
     createPrototype.mutate(
       { data: { htmlContent: text, fileName: file.name, projectId: id } },
       {
         onSuccess: (data) => {
           setFile(null);
-          // Track this new prototype as pending a thumbnail (with timestamp for timeout)
           setPendingThumbnailIds((prev) => new Map([...prev, [data.id, Date.now()]]));
           queryClient.invalidateQueries({ queryKey: getGetProjectQueryKey(id) });
+        },
+        onError: (error) => {
+          toast({
+            title: "Upload failed",
+            description: error.message ?? "Could not upload the HTML file. Please try again.",
+            variant: "destructive",
+          });
         },
       }
     );

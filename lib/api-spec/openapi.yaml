@@ -417,7 +417,7 @@ components:
       properties:
         htmlContent:
           type: string
-          maxLength: 5242880
+          maxLength: 20971520
         fileName:
           type: string
           maxLength: 255

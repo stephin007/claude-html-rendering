@@ -92,7 +92,7 @@ export const DeleteProjectResponse = zod.object({
  * @summary Upload an HTML file to a project
  */
 export const CreatePrototypeBody = zod.object({
-  "htmlContent": zod.string().max(5242880),
+  "htmlContent": zod.string().max(20971520),
   "fileName": zod.string().max(255),
   "projectId": zod.string()
 })
